@@ -22,7 +22,8 @@ class Consolidator:
         # Expresion regular que busca archivos con nombre INFORME ESTADISTICO
         self.newlist_Informe = []
         for filename in os.listdir(self.directorio):
-            self.newlist_Informe.append(self.directorio+filename)
+            if filename.endswith("xlsx"):
+                self.newlist_Informe.append(self.directorio+filename)
         logger.info( 'Los informes excel son {}'.format(self.newlist_Informe))
 
     def consolidate(self):
@@ -39,11 +40,15 @@ class Consolidator:
             df = pd.ExcelFile(archivo)
             # Leo la primera hoja del excel
             DatosDF = df.parse(sheet_name=df.sheet_names[0])
-            self.Datos = pd.concat([self.Datos,DatosDF])
-            logger.info("{} cargado".format(archivo))
+            try:
+                DatosDF = DatosDF[[u'FechaNac', u'Sexo', u'Comuna', u'Prevision', u'Plan',
+                  u'Especialidad', u'TipoAtencion',
+                  u'FechaCita', u'HoraCita', u'EstadoCita']]
+                self.Datos = pd.concat([self.Datos,DatosDF])
+                logger.info("{} cargado".format(archivo))
+            except KeyError:
+                logger.info("{} error".format(archivo))
         
-        del df
-        del DatosDF
-            
+        self.Datos.dropna(inplace=True)
         #Datos.to_csv('Base.csv', sep='\t', encoding='utf-8',index=True)
         self.Datos.to_csv(self.consolidated_data_location, encoding='utf-8',index=False)

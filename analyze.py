@@ -1,8 +1,8 @@
 from src.data.data_consolidation import Consolidator
 from src.data.hlcm_data import HlcmData
 
-# c = Consolidator(r"data/raw/informe_estadistico/",r"data/interim/Base.csv")
-# c.consolidate()
+c = Consolidator(r"data/raw/informe_estadistico/",r"data/interim/Base.csv")
+c.consolidate()
 
 h = HlcmData(r"data/interim/Base.csv")
 h.transform()
