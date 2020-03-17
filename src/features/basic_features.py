@@ -1,6 +1,7 @@
 import pandas as pd
 import sklearn.preprocessing
 import logging
+import numpy as np
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -16,17 +17,20 @@ class Featurizer:
         self.data["month"] = self.data["FechaCita"].dt.month_name()
         self.data["day"] = self.data["FechaCita"].dt.day_name()
         self.data["hour"] = self.data["HoraCita"].dt.hour
-        self.data.drop(columns=["FechaCita","HoraCita","FechaNac"], inplace=True, axis=1)
-        logger.info("current shape: {}".format(self.data.shape))
 
         self.data = self.data[self.data["EstadoCita"].isin(["Atendido","No Atendido"])]
+        self.data["NSP"] = np.where(self.data["EstadoCita"] == "No Atendido",1,0)
+
+        self.data.drop(columns=["FechaCita","HoraCita","FechaNac","EstadoCita"], inplace=True, axis=1)
+        logger.info("current shape: {}".format(self.data.shape))
+
         self.data = self.data[(self.data["age"] <= 15) & (self.data["age"] >= 0)]
-        self.data = self.data[(self.data["hour"] <= 17) & (self.data["age"] >= 8)]
+        self.data = self.data[(self.data["hour"] <= 17) & (self.data["hour"] >= 8)]
         self.data["hour"] = self.data["hour"].astype('category')
         logger.info("current shape: {}".format(self.data.shape))
 
         age_scaler = sklearn.preprocessing.MinMaxScaler()
-        self.data["age"] = age_scaler.fit_transform(self.data["age"].values.reshape(-1, 1))
+        self.data["age"] = age_scaler.fit_transform(self.data[["age"]])
 
         self.data = pd.get_dummies(self.data)
         logger.info("current shape: {}".format(self.data.shape))
