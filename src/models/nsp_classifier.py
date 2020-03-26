@@ -27,6 +27,8 @@ class Trainer:
         self.classifier = sklearn.ensemble.RandomForestClassifier(n_estimators=100, verbose=5, n_jobs=-1, oob_score=True, random_state=11, class_weight='balanced')
         self.classifier.fit(self.features,self.label)
         logger.info("oob score: {}".format(self.classifier.oob_score_))
+        vil = pd.DataFrame(list(zip(self.features.columns,self.classifier.feature_importances_)),columns=["var","importance"]).sort_values("importance",ascending=False)
+        vil.to_csv(classifier_location + "_vil.csv",index=False)
         joblib.dump(self.classifier, classifier_location)
 
 class Evaluator:
