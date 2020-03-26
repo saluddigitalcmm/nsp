@@ -41,7 +41,7 @@ class Consolidator:
             # Leo la primera hoja del excel
             DatosDF = df.parse(sheet_name=df.sheet_names[0])
             try:
-                DatosDF = DatosDF[[u'FechaNac', u'Sexo', u'Comuna', u'Prevision', u'Plan',
+                DatosDF = DatosDF[["PAID",u'FechaNac', u'Sexo', u'Comuna', u'Prevision', u'Plan',
                   u'Especialidad', u'TipoAtencion',
                   u'FechaCita', u'HoraCita', u'EstadoCita']]
                 self.Datos = pd.concat([self.Datos,DatosDF])

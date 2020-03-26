@@ -8,6 +8,8 @@ logger = logging.getLogger(__name__)
 class Featurizer:
     def __init__(self,interim_dataset_location):
         self.data = pd.read_csv(interim_dataset_location)
+        self.data.drop(columns=["PAID"], inplace=True, axis=1)
+
         logger.info("current shape: {}".format(self.data.shape))
     def generate_features(self):
         self.data["FechaCita"] = pd.to_datetime(self.data["FechaCita"])
