@@ -23,8 +23,7 @@ class Featurizer:
         self.data = self.data[self.data["EstadoCita"].isin(["Atendido","No Atendido"])]
         self.data["NSP"] = np.where(self.data["EstadoCita"] == "No Atendido",1,0)
 
-        self.data_to_history = self.data[["PAID","Especialidad","FechaCita"]]
-        self.data = self.data.drop(columns=["PAID","FechaCita","HoraCita","FechaNac","EstadoCita"], axis=1)
+        
         logger.info("current shape: {}".format(self.data.shape))
 
         self.data = self.data[(self.data["age"] <= 15) & (self.data["age"] >= 0)]
@@ -33,7 +32,8 @@ class Featurizer:
         logger.info("current shape: {}".format(self.data.shape))
 
         self.data["age"] = pd.cut(self.data["age"],[0,0.5,5,12,18],right=False,labels=["lactante","infante_1","infante_2","adolescente"])
-
+        self.data_to_history = self.data[["PAID","Especialidad","FechaCita"]]
+        self.data = self.data.drop(columns=["PAID","FechaCita","HoraCita","FechaNac","EstadoCita"], axis=1)
         self.data = pd.get_dummies(self.data)
         logger.info("current shape: {}".format(self.data.shape))
     def generate_history_feature(self,db_location):
@@ -83,6 +83,7 @@ class Featurizer:
         self.data["p_NSP"] = get_history_from_db_simple(self.data_to_history[["PAID","Especialidad"]]).fillna(value=0.5)
 
     def write(self,data_location):
+        self.data.dropna(inplace=True)
         self.data.to_csv(data_location,index=False)
 
 
