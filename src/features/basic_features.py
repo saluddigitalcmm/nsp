@@ -15,6 +15,8 @@ class Featurizer:
         self.data["FechaCita"] = pd.to_datetime(self.data["FechaCita"])
         self.data["HoraCita"] = pd.to_datetime(self.data["HoraCita"])
         self.data["FechaNac"] = pd.to_datetime(self.data["FechaNac"])
+        self.data["FechaReserva"] = pd.to_datetime(self.data["FechaReserva"])
+        self.data["delay"] = (self.data["FechaCita"]-self.data["FechaReserva"]).astype('timedelta64[W]')
         self.data["age"] = (self.data["FechaCita"]-self.data["FechaNac"]).astype('timedelta64[Y]')
         self.data["month"] = self.data["FechaCita"].dt.month_name()
         self.data["day"] = self.data["FechaCita"].dt.day_name()
@@ -27,8 +29,10 @@ class Featurizer:
         logger.info("current shape: {}".format(self.data.shape))
 
         self.data = self.data[(self.data["age"] <= 15) & (self.data["age"] >= 0)]
+        self.data = self.data[(self.data["delay"] <= 10) & (self.data["delay"] >= 0)]
         self.data = self.data[(self.data["hour"] <= 17) & (self.data["hour"] >= 8)]
         self.data["hour"] = self.data["hour"].astype('category')
+        self.data["delay"] = self.data["delay"].astype('category')
         logger.info("current shape: {}".format(self.data.shape))
 
         self.data["age"] = pd.cut(self.data["age"],[0,0.5,5,12,18],right=False,labels=["lactante","infante_1","infante_2","adolescente"])
@@ -88,7 +92,7 @@ class Featurizer:
         #
         #print DD.loc[DD['TipoProfesionalC']=='NoMedico']['TipoProfesional'].value_counts()
 
-        self.data = self.data.drop(columns=["PAID","FechaCita","HoraCita","FechaNac","EstadoCita",'TipoProfesional', 'CodPrestacion'], axis=1)
+        self.data = self.data.drop(columns=["PAID","FechaCita","HoraCita","FechaNac","FechaReserva","EstadoCita",'TipoProfesional', 'CodPrestacion'], axis=1)
         logger.info(self.data.columns)
         self.data = pd.get_dummies(self.data)
         logger.info("current shape: {}".format(self.data.shape))
