@@ -33,9 +33,67 @@ class Featurizer:
 
         self.data["age"] = pd.cut(self.data["age"],[0,0.5,5,12,18],right=False,labels=["lactante","infante_1","infante_2","adolescente"])
         self.data_to_history = self.data[["PAID","Especialidad","FechaCita"]]
-        self.data = self.data.drop(columns=["PAID","FechaCita","HoraCita","FechaNac","EstadoCita"], axis=1)
+
+        ## Crear clasificacion TipoPrestacion medica/no medica a partir de los codigos FONASA
+
+        # Lista de codigos de consultas medicas
+        CodigosConsultaMedica = ['101111','101112','101113','903001']
+
+        # Lista de codigos de consultas no medicas
+        CodigosConsultaNoMedica = ['903002','903303','102001','102005','102006','102007',
+                                '1101004','1101011','1101041','1101043','1101045','1201009',
+                                '1301008','1301009']
+
+        # Lista de codigos de procedimientos
+        CodigosProcedimiento = ['305048','901005','1101009','1101010','1701003',
+                                '1701006','1701045','1707002','1901030','2701013',
+                                '2701015','2702001','AA09A3','AA09A4','Estudio']
+
+        self.data['TipoPrestacionC'] = 'OTRO'
+
+        self.data.loc[self.data['CodPrestacion'].isin(CodigosConsultaMedica),'TipoPrestacionC'] = 'ConsultaMedica'
+        self.data.loc[self.data['CodPrestacion'].isin(CodigosConsultaNoMedica),'TipoPrestacionC'] = 'ConsultaNoMedica'
+        self.data.loc[self.data['CodPrestacion'].isin(CodigosProcedimiento),'TipoPrestacionC'] = 'Procedimiento'
+        #DD.loc[np.logical_not(DD['CodPrestacion'].isin(CodigosConsultaMedica+CodigosConsultaNoMedica+CodigosProcedimiento)),'TipoPrestacionC'] = 'OTRO'
+
+        ## Crear clasificacion TipoAtencion Cita Nueva/Repetida/Otros
+
+        # Lista de tipos de consultas nuevas
+        TipoAtencion_Nueva = ['Consulta Nueva','Consulta Compleja Nueva']
+
+        # Lista de tipos de consultas repetidas
+        TipoAtencion_Repetida = ['Consulta Repetida','Consulta Compleja Repetida']
+
+        # Lista de tipos de consultas nuevas en APS
+        TipoAtencion_NuevaAPS = ['CN - ABIERTA APS','Consulta Nueva GES INCA']
+
+        # Lista de otros tipos de atencion
+        TipoAtencion_Otros = ['PROC - HLCM','Consulta Abreviada (Receta)',
+                            'CN - Post Operados','CN - Consulta nueva GES',
+                            'PROC - ABIERTA APS','CN - Post Operado',
+                            'Alta de Tratamiento','Procedimiento']
+
+        #map(unicode,Profesional_medico)
+        #map(unicode,Profesional_medico)
+
+        # definir la columna con clasificacion de tipo de atencion TipoAtencionC (clasificacion)
+        self.data['TipoAtencionC'] = 'OTRO'
+
+        # transformar las entradas de TipoAtencion de unicode a string
+        self.data['TipoAtencion'].apply(lambda x: str(x))
+
+        # decir si el tipo de atencion es nueva, repetida, nueva_APS u otra, 
+        # guardar en TipoProfesionalC
+        self.data.loc[self.data['TipoAtencion'].isin(TipoAtencion_Nueva),'TipoAtencionC'] = 'ConsultaNueva'
+        self.data.loc[self.data['TipoAtencion'].isin(TipoAtencion_Repetida),'TipoAtencionC'] = 'ConsultaRepetida'
+        self.data.loc[self.data['TipoAtencion'].isin(TipoAtencion_NuevaAPS),'TipoAtencionC'] = 'ConsultaNuevaAPS'
+        #DD.loc[DD['TipoAtencion'].isin(TipoAtencion_Otros),'TipoAtencionC'] = 'Otros'
+
+        self.data = self.data.drop(columns=["PAID","FechaCita","HoraCita","FechaNac","EstadoCita",'TipoProfesional', 'CodPrestacion', 'TipoAtencion'], axis=1)
+        logger.info(self.data.columns)
         self.data = pd.get_dummies(self.data)
         logger.info("current shape: {}".format(self.data.shape))
+
     def generate_history_feature(self,db_location):
         conn = sqlite3.connect(db_location)
         cur = conn.cursor()
@@ -84,6 +142,7 @@ class Featurizer:
 
     def write(self,data_location):
         self.data.dropna(inplace=True)
+        logger.info(self.data.columns)
         self.data.to_csv(data_location,index=False)
 
 
