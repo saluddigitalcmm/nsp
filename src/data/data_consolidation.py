@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class Consolidator:
-    def __init__(self,raw_data_folder,consolidated_data_location):
+    def __init__(self,raw_data_folder,consolidated_data_location,citas_excel_location):
         ## Abrir y leer archivos Excel
         self.consolidated_data_location = consolidated_data_location
         self.directorio = raw_data_folder
@@ -24,31 +24,44 @@ class Consolidator:
         for filename in os.listdir(self.directorio):
             if filename.endswith("xlsx"):
                 self.newlist_Informe.append(self.directorio+filename)
+        self.citas_excel_location = citas_excel_location
         logger.info( 'Los informes excel son {}'.format(self.newlist_Informe))
 
     def consolidate(self):
         # El archivo Base.csv sera donde se guarde la base de datos completa. 
         # Si no esta en el directorio, se crea
         
-
         
+        columns = ["PAID",u'FechaNac', u'Sexo', u'Comuna', u'Prevision',
+                  u'Especialidad', u'TipoAtencion', 'TipoProfesional', 'CodPrestacion',
+                  u'FechaCita', u'EstadoCita', u'HoraCita']
+        self.citas_datos = pd.read_excel(self.citas_excel_location, parse_dates=['FechaNac','FechaCita','FechaReserva'])[columns[:-1] + ['FechaReserva']]
+        self.citas_datos.dropna(inplace=True)
         logger.info('Leer todos los excels para compilarlos')
-        
         for archivo in self.newlist_Informe:
-        
+
             # Abro el archivo excel
             df = pd.ExcelFile(archivo)
             # Leo la primera hoja del excel
-            DatosDF = df.parse(sheet_name=df.sheet_names[0])
             try:
-                DatosDF = DatosDF[["PAID",u'FechaNac', u'Sexo', u'Comuna', u'Prevision',
-                  u'Especialidad', u'TipoAtencion', 'TipoProfesional', 'CodPrestacion',
-                  u'FechaCita', u'HoraCita', u'EstadoCita']]
+                DatosDF = df.parse(sheet_name=df.sheet_names[0],parse_dates=['FechaNac','FechaCita'])
+            
+                DatosDF = DatosDF[columns]
                 self.Datos = pd.concat([self.Datos,DatosDF])
                 logger.info("{} cargado".format(archivo))
             except KeyError as e:
                 logger.info("{} error: {}".format(archivo,e))
+            except ValueError as e:
+                logger.info("{} error: {}".format(archivo,e))
         
         self.Datos.dropna(inplace=True)
+
+        self.Datos = self.Datos.merge(self.citas_datos,on=columns[:-1],how="left")
+
+        logger.info(self.Datos.columns)
+
+        self.Datos.dropna(inplace=True)
+
+        
         #Datos.to_csv('Base.csv', sep='\t', encoding='utf-8',index=True)
         self.Datos.to_csv(self.consolidated_data_location, encoding='utf-8',index=False)
