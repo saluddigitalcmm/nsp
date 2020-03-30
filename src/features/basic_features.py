@@ -56,40 +56,39 @@ class Featurizer:
         self.data.loc[self.data['CodPrestacion'].isin(CodigosProcedimiento),'TipoPrestacionC'] = 'Procedimiento'
         #DD.loc[np.logical_not(DD['CodPrestacion'].isin(CodigosConsultaMedica+CodigosConsultaNoMedica+CodigosProcedimiento)),'TipoPrestacionC'] = 'OTRO'
 
-        ## Crear clasificacion TipoAtencion Cita Nueva/Repetida/Otros
+        ## Crear clasificacion Profesional Medico/No medico
 
-        # Lista de tipos de consultas nuevas
-        TipoAtencion_Nueva = ['Consulta Nueva','Consulta Compleja Nueva']
-
-        # Lista de tipos de consultas repetidas
-        TipoAtencion_Repetida = ['Consulta Repetida','Consulta Compleja Repetida']
-
-        # Lista de tipos de consultas nuevas en APS
-        TipoAtencion_NuevaAPS = ['CN - ABIERTA APS','Consulta Nueva GES INCA']
-
-        # Lista de otros tipos de atencion
-        TipoAtencion_Otros = ['PROC - HLCM','Consulta Abreviada (Receta)',
-                            'CN - Post Operados','CN - Consulta nueva GES',
-                            'PROC - ABIERTA APS','CN - Post Operado',
-                            'Alta de Tratamiento','Procedimiento']
+        # lista de tipos de profesionales medicos
+        Profesional_medico = ['Médico','Médico Cirujano','Odontólogo/Dentista',
+                            'Cirujano(a) Dentista','Ginecólogo(a)','Psiquiatra']
 
         #map(unicode,Profesional_medico)
+
+        # lista de tipos de profesionales no medicos
+        Profesional_noMedico = ['Enfermera (o)','Psicólogo (a)',#'No Mencionada',
+                                'Kinesiólogo (a)','Fonoaudiólogo (a)','Tecnólogo Médico',
+                                'Nutricionista','Terapeuta Ocupacional','Asistente Social',
+                                'Técnico Paramédico']
+
         #map(unicode,Profesional_medico)
 
-        # definir la columna con clasificacion de tipo de atencion TipoAtencionC (clasificacion)
-        self.data['TipoAtencionC'] = 'OTRO'
+        # crear columna TipoProfesionalC (Clasificacion)
+        self.data['TipoProfesionalC'] = 'OTRO'
 
-        # transformar las entradas de TipoAtencion de unicode a string
-        self.data['TipoAtencion'].apply(lambda x: str(x))
+        # transformar las entradas de TipoProfesional unicode a string
+        self.data['TipoProfesional'].apply(lambda x: str(x))
 
-        # decir si el tipo de atencion es nueva, repetida, nueva_APS u otra, 
-        # guardar en TipoProfesionalC
-        self.data.loc[self.data['TipoAtencion'].isin(TipoAtencion_Nueva),'TipoAtencionC'] = 'ConsultaNueva'
-        self.data.loc[self.data['TipoAtencion'].isin(TipoAtencion_Repetida),'TipoAtencionC'] = 'ConsultaRepetida'
-        self.data.loc[self.data['TipoAtencion'].isin(TipoAtencion_NuevaAPS),'TipoAtencionC'] = 'ConsultaNuevaAPS'
-        #DD.loc[DD['TipoAtencion'].isin(TipoAtencion_Otros),'TipoAtencionC'] = 'Otros'
+        # decir si el tipo de profesional es medico o no medico, guardar en TipoProfesionalC
+        self.data.loc[self.data['TipoProfesional'].astype(str).isin(Profesional_medico),'TipoProfesionalC'] = 'Medico'
+        self.data.loc[self.data['TipoProfesional'].astype(str).isin(Profesional_noMedico),'TipoProfesionalC'] = 'NoMedico'
+        #DD.loc[np.logical_not(DD['TipoProfesional'].isin(Profesional_medico)),'TipoProfesionalC'] = 'NoMedico'
 
-        self.data = self.data.drop(columns=["PAID","FechaCita","HoraCita","FechaNac","EstadoCita",'TipoProfesional', 'CodPrestacion', 'TipoAtencion'], axis=1)
+        #print DD.loc[DD['TipoProfesionalC']=='Medico']['TipoProfesional'].value_counts()
+        #print ''
+        #
+        #print DD.loc[DD['TipoProfesionalC']=='NoMedico']['TipoProfesional'].value_counts()
+
+        self.data = self.data.drop(columns=["PAID","FechaCita","HoraCita","FechaNac","EstadoCita",'TipoProfesional', 'CodPrestacion'], axis=1)
         logger.info(self.data.columns)
         self.data = pd.get_dummies(self.data)
         logger.info("current shape: {}".format(self.data.shape))
