@@ -42,12 +42,12 @@ class Consolidator:
             DatosDF = df.parse(sheet_name=df.sheet_names[0])
             try:
                 DatosDF = DatosDF[["PAID",u'FechaNac', u'Sexo', u'Comuna', u'Prevision',
-                  u'Especialidad', u'TipoAtencion',
+                  u'Especialidad', u'TipoAtencion', 'TipoProfesional', 'CodPrestacion',
                   u'FechaCita', u'HoraCita', u'EstadoCita']]
                 self.Datos = pd.concat([self.Datos,DatosDF])
                 logger.info("{} cargado".format(archivo))
-            except KeyError:
-                logger.info("{} error".format(archivo))
+            except KeyError as e:
+                logger.info("{} error: {}".format(archivo,e))
         
         self.Datos.dropna(inplace=True)
         #Datos.to_csv('Base.csv', sep='\t', encoding='utf-8',index=True)
