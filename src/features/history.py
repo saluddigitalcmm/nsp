@@ -16,4 +16,4 @@ class HistoryCreator:
         self.data.drop_duplicates(inplace=True)
     def write_db(self,db_location):
         engine = create_engine(r'sqlite:///'+db_location, echo=True)
-        self.data.to_sql('history', con=engine,if_exists="append",index=False)
+        self.data.to_sql('history', con=engine,if_exists="replace",index=False)
