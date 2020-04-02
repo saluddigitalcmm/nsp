@@ -36,7 +36,10 @@ class Consolidator:
                   u'Especialidad', u'TipoAtencion', 'TipoProfesional', 'CodPrestacion',
                   u'FechaCita', u'EstadoCita', u'HoraCita']
         self.citas_datos = pd.read_excel(self.citas_excel_location, parse_dates=['FechaNac','FechaCita','FechaReserva'])[columns[:-1] + ['FechaReserva']]
+        self.citas_datos["PAID"] = pd.to_numeric(self.citas_datos["PAID"],errors="coerce",downcast="integer")
+        logger.info("citas_datos shape: {}".format(self.citas_datos.shape))
         self.citas_datos.dropna(inplace=True)
+        logger.info("citas_datos shape: {}".format(self.citas_datos.shape))
         logger.info('Leer todos los excels para compilarlos')
         for archivo in self.newlist_Informe:
 
@@ -45,6 +48,7 @@ class Consolidator:
             # Leo la primera hoja del excel
             try:
                 DatosDF = df.parse(sheet_name=df.sheet_names[0],parse_dates=['FechaNac','FechaCita'])
+                DatosDF["PAID"] = pd.to_numeric(DatosDF["PAID"],errors="coerce",downcast="integer")
             
                 DatosDF = DatosDF[columns]
                 self.Datos = pd.concat([self.Datos,DatosDF])
@@ -53,15 +57,15 @@ class Consolidator:
                 logger.info("{} error: {}".format(archivo,e))
             except ValueError as e:
                 logger.info("{} error: {}".format(archivo,e))
-        
+        logger.info("Datos shape: {}".format(self.Datos.shape))
         self.Datos.dropna(inplace=True)
-
-        self.Datos = self.Datos.merge(self.citas_datos,on=columns[:-1],how="left")
-
+        logger.info("Datos shape: {}".format(self.Datos.shape))
+        self.Datos = self.Datos.merge(self.citas_datos[['FechaNac','FechaCita','CodPrestacion','FechaReserva']],how="left")
+        logger.info("Datos shape: {}".format(self.Datos.shape))
         logger.info(self.Datos.columns)
 
         self.Datos.dropna(inplace=True)
-
+        logger.info("Datos shape: {}".format(self.Datos.shape))
         
         #Datos.to_csv('Base.csv', sep='\t', encoding='utf-8',index=True)
         self.Datos.to_csv(self.consolidated_data_location, encoding='utf-8',index=False)
