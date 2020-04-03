@@ -4,7 +4,7 @@ from src.models.nsp_classifier import Trainer, Evaluator
 from src.data.dataset_generator import Splitter
 from src.features.history import HistoryCreator
 
-c = Consolidator(r"data/raw/informe_estadistico/",r"data/interim/Base.csv")
+c = Consolidator(r"data/raw/informe_estadistico/",r"data/interim/Base.csv","data/raw/CITAS_HLCM_no_psw.xlsx")
 c.consolidate()
 
 h = HistoryCreator("data/interim/Base.csv")
