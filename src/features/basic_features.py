@@ -17,7 +17,7 @@ class Featurizer:
         self.data["FechaNac"] = pd.to_datetime(self.data["FechaNac"])
         self.data["FechaReserva"] = pd.to_datetime(self.data["FechaReserva"])
         self.data["delay"] = (self.data["FechaCita"]-self.data["FechaReserva"]).astype('timedelta64[W]')
-        self.data["age"] = (self.data["FechaCita"]-self.data["FechaNac"]).astype('timedelta64[Y]')
+        self.data["age"] = (self.data["FechaCita"]-self.data["FechaNac"]).astype('timedelta64[D]')/365.25
         self.data["month"] = self.data["FechaCita"].dt.month_name()
         self.data["day"] = self.data["FechaCita"].dt.day_name()
         self.data["hour"] = self.data["HoraCita"].dt.hour
