@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import sklearn.linear_model
 import sklearn.svm
+import sklearn.dummy
 import sklearn.ensemble
 import sklearn.neural_network
 import sklearn.model_selection
@@ -141,6 +142,8 @@ class NspModelDev:
             with open(report_location + 'cross_val_' + model_name + '.json', 'w', encoding='utf-8') as json_file:
                 json.dump(self.cv_scores[model_name], json_file, indent=2, ensure_ascii=False, cls=NpEncoder)
     def train_best_models(self,models_location,grid_search_results_location):
+        features = self.train[:,:-1]
+        label = self.train[:,-1]
         for model in self.models:
             model_name = model[0].__class__.__name__
             estimator = model[0]
@@ -151,10 +154,9 @@ class NspModelDev:
                 estimator.set_params(**best_hp,n_jobs=-1,verbose=2)
             except:
                 estimator.set_params(**best_hp,verbose=2)
-            features = self.train[:,:-1]
-            label = self.train[:,-1]
             estimator.fit(features,label)
             joblib.dump(estimator, models_location + model_name + ".joblib")
+        
     def predict_best_models (self,models_location,features_test, label_test):
         features_test = pd.read_csv(features_test)
         label_test = pd.read_csv(label_test)
@@ -162,6 +164,17 @@ class NspModelDev:
             model_name = model[0].__class__.__name__
             estimator = joblib.load(models_location + model_name + ".joblib")
             predictions_class = estimator.predict(features_test)
-            predictions_probs = estimator.predict_proba(features_test)
+            try:
+                predictions_probs = estimator.predict_proba(features_test)
+            except:
+                predictions_probs = np.zeros((len(predictions_class),2))
             results = np.column_stack([label_test,predictions_class,predictions_probs])
             np.savetxt(models_location + model_name + "_predictions.txt",results)
+        estimator = sklearn.dummy.DummyClassifier()
+        features = self.train[:,:-1]
+        label = self.train[:,-1]
+        estimator.fit(features,label)
+        predictions_class = estimator.predict(features_test)
+        predictions_probs = estimator.predict_proba(features_test)
+        results = np.column_stack([label_test,predictions_class,predictions_probs])
+        np.savetxt(models_location + "DummyClassifier" + "_predictions.txt",results)
