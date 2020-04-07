@@ -64,3 +64,57 @@ class StatisticalAnalysis:
         }
         with open(report_location, 'w', encoding='utf-8') as json_file:
             json.dump(self.report, json_file, indent=2, ensure_ascii=False, cls=NpEncoder)
+
+class Performance:
+    def __init__(self,results_file):
+        results = np.loadtxt(results_file)
+        self.true = np.array(results[:,0],dtype=int)
+        self.predicted_class = np.array(results[:,1],dtype=int)
+        self.predicted_proba = results[:,3]
+    def analyze(self):
+        self.classification_report = sklearn.metrics.classification_report(self.true,self.predicted_class,output_dict=True)
+        self.f2_score = sklearn.metrics.fbeta_score(self.true,self.predicted_class,beta=2, pos_label=1)
+        self.confusion_matrix = sklearn.metrics.confusion_matrix(self.true,self.predicted_class)
+        self.roc_curve = sklearn.metrics.roc_curve(self.true,self.predicted_proba)
+        self.roc_auc_score = sklearn.metrics.roc_auc_score(self.true,self.predicted_proba)
+        FP = self.confusion_matrix[1,0]
+        FN = self.confusion_matrix[0,1]
+        TP = self.confusion_matrix[1,1]
+        TN = self.confusion_matrix[0,0]
+
+        FP = FP.astype(float)
+        FN = FN.astype(float)
+        TP = TP.astype(float)
+        TN = TN.astype(float)
+
+        # Sensitivity, hit rate, recall, or true positive rate
+        self.TPR = TP/(TP+FN)
+        # Specificity or true negative rate
+        self.TNR = TN/(TN+FP) 
+        # Precision or positive predictive value
+        self.PPV = TP/(TP+FP)
+        # Negative predictive value
+        self.NPV = TN/(TN+FN)
+        # Fall out or false positive rate
+        self.FPR = FP/(FP+TN)
+        # False negative rate
+        self.FNR = FN/(TP+FN)
+        # False discovery rate
+        self.FDR = FP/(TP+FP)
+    def generate_report(self,report_location):
+        self.report = {
+            'classification_report': self.classification_report,
+            'f2_score_1':self.f2_score,
+            'roc_auc_score': self.roc_auc_score,
+            'confusion_matrix': self.confusion_matrix,
+            'TPR': self.TPR,
+            'TNR': self.TNR,
+            'PPV': self.PPV,
+            'NPV': self.NPV,
+            'FPR': self.FPR,
+            'FNR': self.FNR,
+            'FDR': self.FDR,
+            'roc_curve': self.roc_curve
+        }
+        with open(report_location, 'w', encoding='utf-8') as json_file:
+            json.dump(self.report, json_file, indent=2, ensure_ascii=False, cls=NpEncoder)
