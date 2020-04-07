@@ -78,7 +78,7 @@ best_hp = {
 }
 
 class NspModelDev:
-    def __init__(self, features_train, label_train, features_test, label_test, subsample=None, models = models):
+    def __init__(self, features_train, label_train, subsample=None, models = models):
         self.models = models
         self.features_train = pd.read_csv(features_train)
         self.label_train = pd.read_csv(label_train)
@@ -140,26 +140,28 @@ class NspModelDev:
             self.cv_scores[model_name] = cv_scores
             with open(report_location + 'cross_val_' + model_name + '.json', 'w', encoding='utf-8') as json_file:
                 json.dump(self.cv_scores[model_name], json_file, indent=2, ensure_ascii=False, cls=NpEncoder)
-
-class Trainer:
-    def __init__(self,features,label):
-        self.features = pd.read_csv(features)
-        self.label = pd.read_csv(label)
-    def fit(self, classifier_location):
-        self.classifier = sklearn.ensemble.RandomForestClassifier(n_estimators=100, verbose=5, n_jobs=-1, oob_score=True, random_state=11, class_weight='balanced')
-        self.classifier.fit(self.features,self.label)
-        logger.info("oob score: {}".format(self.classifier.oob_score_))
-        vil = pd.DataFrame(list(zip(self.features.columns,self.classifier.feature_importances_)),columns=["var","importance"]).sort_values("importance",ascending=False)
-        vil.to_csv(classifier_location + "_vil.csv",index=False)
-        joblib.dump(self.classifier, classifier_location)
-
-class Evaluator:
-    def __init__(self,classifier,features,label):
-        self.classifier = joblib.load(classifier)
-        self.label = pd.read_csv(label)
-        self.features = pd.read_csv(features)
-    def evaluate(self, report_location):
-        self.predictions = self.classifier.predict(self.features)
-        self.classification_report = sklearn.metrics.classification_report(self.label,self.predictions,output_dict=True)
-        with open(report_location, 'w', encoding='utf-8') as json_file:
-            json.dump(self.classification_report, json_file, indent=2, ensure_ascii=False, cls=NpEncoder)
+    def train_best_models(self,models_location,grid_search_results_location):
+        for model in self.models:
+            model_name = model[0].__class__.__name__
+            estimator = model[0]
+            with open(grid_search_results_location + 'grid_search_' + model_name + '.json', "r") as read_file:
+                data = json.load(read_file)
+            best_hp=data[1]
+            try:
+                estimator.set_params(**best_hp,n_jobs=-1,verbose=2)
+            except:
+                estimator.set_params(**best_hp,verbose=2)
+            features = self.train[:,:-1]
+            label = self.train[:,-1]
+            estimator.fit(features,label)
+            joblib.dump(estimator, models_location + model_name + ".joblib")
+    def predict_best_models (self,models_location,features_test, label_test):
+        features_test = pd.read_csv(features_test)
+        label_test = pd.read_csv(label_test)
+        for model in self.models:
+            model_name = model[0].__class__.__name__
+            estimator = joblib.load(models_location + model_name + ".joblib")
+            predictions_class = estimator.predict(features_test)
+            predictions_probs = estimator.predict_proba(features_test)
+            results = np.column_stack([label_test,predictions_class,predictions_probs])
+            np.savetxt(models_location + model_name + "_predictions.txt",results)
