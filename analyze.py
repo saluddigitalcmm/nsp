@@ -3,6 +3,9 @@ from src.features.basic_features import Featurizer
 from src.models.nsp_classifier import Trainer, Evaluator
 from src.data.dataset_generator import Splitter
 from src.features.history import HistoryCreator
+from src.models.nsp_classifier import NspModelDev
+from src.visualization.cross_val_viz import CrossValVisualizer
+from src.models.validation import StatisticalAnalysis
 
 c = Consolidator(r"data/raw/informe_estadistico/",r"data/interim/Base.csv","data/raw/CITAS_HLCM_no_psw.xlsx")
 c.consolidate()
@@ -22,5 +25,13 @@ s.split("data/processed/")
 t = Trainer("data/processed/features_train.csv","data/processed/label_train.csv")
 t.fit("models/nsp_classifier.joblib")
 
-e = Evaluator("models/nsp_classifier.joblib","data/processed/features_test.csv","data/processed/label_test.csv")
-e.evaluate("reports/classification_report.json")
+d = NspModelDev("data/processed/features_train.csv","data/processed/label_train.csv","data/processed/features_test.csv","data/processed/label_test.csv",30000)
+d.grid_search("reports/grid_search/",n_jobs=-1)
+d.train_models("reports/grid_search/",-1,"reports/cross_val/")
+
+cross_val_viz = CrossValVisualizer('reports/cross_val/')
+cross_val_viz.plot('reports/figures/cross_val.pdf')
+
+statistical_analyzer = StatisticalAnalysis('reports/cross_val/')
+statistical_analyzer.analyze()
+statistical_analyzer.generate_report('reports/cross_val_statistical_analysis.json')
