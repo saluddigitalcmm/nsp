@@ -101,7 +101,6 @@ class Performance:
         self.FNR = FN/(TP+FN)
         # False discovery rate
         self.FDR = FP/(TP+FP)
-    def generate_report(self,report_location):
         self.report = {
             'classification_report': self.classification_report,
             'f2_score_1':self.f2_score,
@@ -116,5 +115,6 @@ class Performance:
             'FDR': self.FDR,
             'roc_curve': self.roc_curve
         }
+    def generate_report(self,report_location):
         with open(report_location, 'w', encoding='utf-8') as json_file:
             json.dump(self.report, json_file, indent=2, ensure_ascii=False, cls=NpEncoder)
