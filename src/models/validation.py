@@ -77,8 +77,8 @@ class Performance:
         self.confusion_matrix = sklearn.metrics.confusion_matrix(self.true,self.predicted_class)
         self.roc_curve = sklearn.metrics.roc_curve(self.true,self.predicted_proba)
         self.roc_auc_score = sklearn.metrics.roc_auc_score(self.true,self.predicted_proba)
-        FP = self.confusion_matrix[1,0]
-        FN = self.confusion_matrix[0,1]
+        FP = self.confusion_matrix[0,1]
+        FN = self.confusion_matrix[1,0]
         TP = self.confusion_matrix[1,1]
         TN = self.confusion_matrix[0,0]
 
@@ -101,8 +101,31 @@ class Performance:
         self.FNR = FN/(TP+FN)
         # False discovery rate
         self.FDR = FP/(TP+FP)
+
+        self.total = FP + FN + TP + TN
+        self.calls = FP + TP
+        self.nsp_i = FN + TP
+
+        self.nsp_i_p=self.nsp_i / self.total
+        self.calls_p=self.calls / self.total
+        self.nsp_f_p=FN/self.total
+        self.reduction_p=1-self.nsp_f_p/self.nsp_i_p
+        self.cost_effectiveness=self.reduction_p/self.calls_p
+
         self.report = {
             'classification_report': self.classification_report,
+            'table': {
+                'precision':self.classification_report["1"]['precision'],
+                'recall':self.classification_report["1"]['recall'],
+                'f1-score':self.classification_report["1"]['f1-score'],
+                'f2-score':self.f2_score,
+                'nsp_i_p':self.nsp_i_p,
+                'calls_p':self.calls_p,
+                'nsp_f_p':self.nsp_f_p,
+                'reduction_p':self.reduction_p,
+                'cost_effectiveness':self.cost_effectiveness,
+                'support':self.classification_report["1"]['support']
+            },
             'f2_score_1':self.f2_score,
             'roc_auc_score': self.roc_auc_score,
             'confusion_matrix': self.confusion_matrix,
