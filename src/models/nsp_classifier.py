@@ -13,6 +13,32 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def cost_effectiveness_score(y_true,y_pred):
+    confusion_matrix=sklearn.metrics.confusion_matrix(y_true,y_pred)
+    FP = confusion_matrix[0,1]
+    FN = confusion_matrix[1,0]
+    TP = confusion_matrix[1,1]
+    TN = confusion_matrix[0,0]
+
+    FP = FP.astype(float)
+    FN = FN.astype(float)
+    TP = TP.astype(float)
+    TN = TN.astype(float)
+
+    total = FP + FN + TP + TN
+    calls = FP + TP
+    nsp_i = FN + TP
+
+    nsp_i_p=nsp_i / total
+    calls_p=calls / total
+    nsp_f_p=FN/total
+    reduction_p=1-nsp_f_p/nsp_i_p
+    cost_effectiveness=reduction_p * (1 - calls_p)
+
+    return cost_effectiveness
+
+cost_effectiveness_scorer = sklearn.metrics.make_scorer(cost_effectiveness_score)
+
 f2_scorer = sklearn.metrics.make_scorer(sklearn.metrics.fbeta_score, beta=2, pos_label=1)
 
 class NpEncoder(json.JSONEncoder):
@@ -99,7 +125,7 @@ class NspModelDev:
             grid_search = sklearn.model_selection.RandomizedSearchCV(
                 estimator=estimator,
                 param_distributions=grid,
-                scoring=f2_scorer,
+                scoring=cost_effectiveness_scorer,
                 n_jobs=n_jobs,
                 verbose=2,
                 random_state=11,
@@ -133,7 +159,8 @@ class NspModelDev:
                     'precision_weighted':'precision_weighted',
                     'recall_weighted':'recall_weighted',
                     'roc_auc':'roc_auc',
-                    'f2_True':f2_scorer
+                    'f2_True':f2_scorer,
+                    'cost_effectiveness':cost_effectiveness_scorer
                 },
                 verbose=2,
                 return_train_score=True
