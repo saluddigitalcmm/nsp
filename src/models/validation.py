@@ -110,7 +110,7 @@ class Performance:
         self.calls_p=self.calls / self.total
         self.nsp_f_p=FN/self.total
         self.reduction_p=1-self.nsp_f_p/self.nsp_i_p
-        self.cost_effectiveness=self.reduction_p/self.calls_p
+        self.cost_effectiveness=self.reduction_p * (1 - self.calls_p)
 
         self.report = {
             'classification_report': self.classification_report,
