@@ -13,6 +13,8 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+np.random.seed(11)
+
 def cost_effectiveness_score(y_true,y_pred):
     confusion_matrix=sklearn.metrics.confusion_matrix(y_true,y_pred)
     FP = confusion_matrix[0,1]
@@ -105,8 +107,11 @@ best_hp = {
 }
 
 class NspModelDev:
-    def __init__(self, features_train, label_train, subsample=None, models = models):
-        self.models = models
+    def __init__(self, features_train, label_train, subsample=None, models = models, models_subset=False):
+        if models_subset:
+            self.models = [models[i] for i in models_subset]
+        else:
+            self.models = models
         self.features_train = pd.read_csv(features_train)
         self.label_train = pd.read_csv(label_train)
         self.train = np.concatenate([self.features_train, self.label_train], axis=1)
