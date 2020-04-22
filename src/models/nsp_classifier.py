@@ -97,16 +97,6 @@ models = [
     ),
 ]
 
-best_estimator = sklearn.ensemble.RandomForestClassifier()
-best_hp = {
-    "n_estimators": 1600,
-    "min_samples_split": 5,
-    "min_samples_leaf": 4,
-    "max_features": "auto",
-    "max_depth": 100,
-    "bootstrap": True
-}
-
 class NspModelDev:
     def __init__(self, features_train, label_train, subsample=None, models = models, models_subset=False):
         if models_subset:
