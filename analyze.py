@@ -21,7 +21,7 @@ f.write("data/interim/data.csv")
 s = Splitter("data/interim/data.csv")
 s.split("data/processed/")
 
-d = NspModelDev("data/processed/features_train.csv","data/processed/label_train.csv",30000)
+d = NspModelDev("data/processed/features_train_resampled.csv","data/processed/label_train_resampled.csv",30000)
 d.grid_search("reports/grid_search/",n_jobs=-1)
 d.train_models("reports/grid_search/",-1,"reports/cross_val/")
 d.train_best_models("models/","reports/grid_search/")
