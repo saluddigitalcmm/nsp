@@ -111,6 +111,7 @@ class Performance:
         self.nsp_f_p=FN/self.total
         self.reduction_p=1-self.nsp_f_p/self.nsp_i_p
         self.cost_effectiveness=self.reduction_p * (1 - self.calls_p)
+        self.cost_effectiveness_2 = self.reduction_p / self.calls_p
 
         self.report = {
             'classification_report': self.classification_report,
@@ -124,6 +125,7 @@ class Performance:
                 'nsp_f_p':self.nsp_f_p,
                 'reduction_p':self.reduction_p,
                 'cost_effectiveness':self.cost_effectiveness,
+                'cost_effectiveness_2':self.cost_effectiveness_2,
                 'support':self.classification_report["1"]['support']
             },
             'f2_score_1':self.f2_score,
