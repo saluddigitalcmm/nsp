@@ -91,7 +91,8 @@ models = [
             'C':[1,10,100,1000],
             'gamma':[1,0.1,0.001,0.0001], 
             'kernel':['linear','rbf'],
-            "class_weight":["balanced"]
+            "class_weight":["balanced"],
+            'probability':[True]
         }
     ),
 ]
