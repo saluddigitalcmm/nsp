@@ -106,6 +106,7 @@ class NspModelDev:
         self.features_train = pd.read_csv(features_train)
         self.label_train = pd.read_csv(label_train)
         self.train = np.concatenate([self.features_train, self.label_train], axis=1)
+        self.train_complete= np.copy(self.train)
         if subsample:
             idx = np.random.randint(len(self.train), size=subsample)
             self.train = self.train[idx,:]
@@ -164,9 +165,13 @@ class NspModelDev:
             self.cv_scores[model_name] = cv_scores
             with open(report_location + 'cross_val_' + model_name + '.json', 'w', encoding='utf-8') as json_file:
                 json.dump(self.cv_scores[model_name], json_file, indent=2, ensure_ascii=False, cls=NpEncoder)
-    def train_best_models(self,models_location,grid_search_results_location):
-        features = self.train[:,:-1]
-        label = self.train[:,-1]
+    def train_best_models(self,models_location,grid_search_results_location,complete=True):
+        if complete:
+            features = self.train_complete[:,:-1]
+            label = self.train_complete[:,-1]
+        else:
+            features = self.train[:,:-1]
+            label = self.train[:,-1]
         for model in self.models:
             model_name = model[0].__class__.__name__
             estimator = model[0]
