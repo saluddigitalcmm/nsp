@@ -7,6 +7,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".", "."))
 import itertools
 import statsmodels.stats.multitest
 import sklearn.metrics
+import imblearn.metrics
 import pandas as pd
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -77,6 +78,7 @@ class Performance:
         self.confusion_matrix = sklearn.metrics.confusion_matrix(self.true,self.predicted_class)
         self.roc_curve = sklearn.metrics.roc_curve(self.true,self.predicted_proba)
         self.roc_auc_score = sklearn.metrics.roc_auc_score(self.true,self.predicted_proba)
+        self.geometric_mean = imblearn.metrics.geometric_mean_score(self.true,self.predicted_class)
         FP = self.confusion_matrix[0,1]
         FN = self.confusion_matrix[1,0]
         TP = self.confusion_matrix[1,1]
@@ -120,6 +122,7 @@ class Performance:
                 'recall':self.classification_report["1"]['recall'],
                 'f1-score':self.classification_report["1"]['f1-score'],
                 'f2-score':self.f2_score,
+                'geometric_mean': self.geometric_mean,
                 'nsp_i_p':self.nsp_i_p,
                 'calls_p':self.calls_p,
                 'nsp_f_p':self.nsp_f_p,
