@@ -7,6 +7,8 @@ import sklearn.ensemble
 import sklearn.neural_network
 import sklearn.model_selection
 import sklearn.metrics
+import imblearn.metrics
+import imblearn.ensemble
 import joblib
 import json
 import logging
@@ -40,6 +42,7 @@ def cost_effectiveness_score(y_true,y_pred):
     return cost_effectiveness
 
 cost_effectiveness_scorer = sklearn.metrics.make_scorer(cost_effectiveness_score)
+geometric_mean_scorer = sklearn.metrics.make_scorer(imblearn.metrics.geometric_mean_score)
 
 f2_scorer = sklearn.metrics.make_scorer(sklearn.metrics.fbeta_score, beta=2, pos_label=1)
 
@@ -95,6 +98,43 @@ models = [
             'probability':[True]
         }
     ),
+    (
+        imblearn.ensemble.RUSBoostClassifier(),
+        {
+            'n_estimators': [50, 100, 400, 800, 1000, 1200, 1400, 1600, 1800, 2000],
+            "replacement":[True,False]
+        }
+    ),
+    (
+        imblearn.ensemble.BalancedRandomForestClassifier(),
+        {
+            'bootstrap': [True, False],
+            'max_depth': [10, 30, 50, 80, 100, None],
+            'max_features': ['auto', 'log2', None],
+            'min_samples_leaf': [1, 2, 4],
+            'min_samples_split': [2, 5, 10],
+            'n_estimators': [100, 200, 500, 1000, 1200, 1400, 1600, 1800],
+            "class_weight":["balanced", None]
+        }
+    ),
+    (
+        imblearn.ensemble.BalancedBaggingClassifier(),
+        {
+            'bootstrap': [True, False],
+            'bootstrap_features': [True, False],
+            'warm_start':[True, False],
+            'replacement':[True, False],
+            'n_estimators': [10,50, 100, 200, 500, 1000, 1200, 1400, 1600, 1800]
+        }
+    ),
+    (
+        imblearn.ensemble.EasyEnsembleClassifier(),
+        {
+            'n_estimators': [10,50, 100, 200, 500, 1000, 1200, 1400, 1600, 1800],
+            'warm_start':[True, False],
+            'replacement':[True, False]
+        }
+    ),
 ]
 
 class NspModelDev:
@@ -111,7 +151,7 @@ class NspModelDev:
             idx = np.random.randint(len(self.train), size=subsample)
             self.train = self.train[idx,:]
 
-    def grid_search(self,report_location,n_jobs=4):
+    def grid_search(self,report_location,n_jobs=4, scoring="cost_effectiveness"):
         self.gs_scores = {}
         for model in self.models:
             model_name = model[0].__class__.__name__
@@ -119,10 +159,14 @@ class NspModelDev:
             grid = model[1]
             features = self.train[:,:-1]
             labels = self.train[:,-1]
+            if scoring == "cost_effectiveness":
+                scorer = cost_effectiveness_scorer
+            if scoring == "geometric_mean":
+                scorer = geometric_mean_scorer
             grid_search = sklearn.model_selection.RandomizedSearchCV(
                 estimator=estimator,
                 param_distributions=grid,
-                scoring=cost_effectiveness_scorer,
+                scoring=scorer,
                 n_jobs=n_jobs,
                 verbose=2,
                 random_state=11,
@@ -157,7 +201,8 @@ class NspModelDev:
                     'recall_weighted':'recall_weighted',
                     'roc_auc':'roc_auc',
                     'f2_True':f2_scorer,
-                    'cost_effectiveness':cost_effectiveness_scorer
+                    'cost_effectiveness':cost_effectiveness_scorer,
+                    'geometric_mean':geometric_mean_scorer
                 },
                 verbose=2,
                 return_train_score=True
@@ -181,7 +226,10 @@ class NspModelDev:
             try:
                 estimator.set_params(**best_hp,n_jobs=-1,verbose=2)
             except:
-                estimator.set_params(**best_hp,verbose=2)
+                try:
+                    estimator.set_params(**best_hp,verbose=2)
+                except:
+                    estimator.set_params(**best_hp)
             estimator.fit(features,label)
             joblib.dump(estimator, models_location + model_name + ".joblib")
         
