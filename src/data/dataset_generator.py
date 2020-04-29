@@ -2,6 +2,19 @@ import sklearn.model_selection
 import pandas as pd
 import imblearn.over_sampling
 import os
+import re
+def normalizer(text, remove_tildes = True): #normalizes a given string to lowercase and changes all vowels to their base form
+    text = text.lower() #string lowering
+    text = re.sub(r'[^A-Za-zñáéíóú]', ' ', text) #replaces every punctuation with a space
+    if remove_tildes:
+        text = re.sub('á', 'a', text) #replaces special vowels to their base forms
+        text = re.sub('é', 'e', text)
+        text = re.sub('í', 'i', text)
+        text = re.sub('ó', 'o', text)
+        text = re.sub('ú', 'u', text)
+    return text
+
+
 class Splitter:
     def __init__(self,data,label="NSP"):
         self.data = pd.read_csv(data)
@@ -39,10 +52,12 @@ class SplitterBySpecialty:
         self.data = pd.read_csv(data)
         specialties = self.data.filter(regex=r"Especialidad",axis=1).idxmax(axis=1)
         self.data["specialty"] = specialties.str.replace("Especialidad_","")
+        self.data["specialty"] = self.data["specialty"].apply(normalizer)
         self.data = self.data[self.data.columns.drop(list(self.data.filter(regex='Especialidad',axis=1)))]
         self.specialty_groups = {name:group for name,group in self.data.groupby("specialty")}
     def split(self,location,resampler = None):
         for specialty,data in self.specialty_groups.items():
+            data.drop("specialty",axis=1,inplace=True)
             specialty_folder = location + specialty + "/"
             if os.path.exists(specialty_folder) == False:
                 os.mkdir(specialty_folder)
