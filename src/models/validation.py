@@ -72,10 +72,13 @@ class Performance:
         self.threshold = threshold
         self.true = np.array(results[:,0],dtype=int)
         self.predicted_proba = results[:,3]
-        if threshold:
-            self.predicted_class = self.predicted_proba >= threshold
-        else:
+        if threshold == None:
             self.predicted_class = np.array(results[:,1],dtype=int)
+        else:
+            if threshold > 0.5:
+                self.predicted_class = self.predicted_proba >= threshold
+            else:
+                self.predicted_class = np.array(results[:,1],dtype=int)
     def analyze(self):
         self.classification_report = sklearn.metrics.classification_report(self.true,self.predicted_class,output_dict=True)
         self.f2_score = sklearn.metrics.fbeta_score(self.true,self.predicted_class,beta=2, pos_label=1)
