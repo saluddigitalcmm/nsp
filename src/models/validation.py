@@ -67,11 +67,15 @@ class StatisticalAnalysis:
             json.dump(self.report, json_file, indent=2, ensure_ascii=False, cls=NpEncoder)
 
 class Performance:
-    def __init__(self,results_file):
+    def __init__(self,results_file,threshold=None):
         results = np.loadtxt(results_file)
+        self.threshold = threshold
         self.true = np.array(results[:,0],dtype=int)
-        self.predicted_class = np.array(results[:,1],dtype=int)
         self.predicted_proba = results[:,3]
+        if threshold:
+            self.predicted_class = self.predicted_proba >= threshold
+        else:
+            self.predicted_class = np.array(results[:,1],dtype=int)
     def analyze(self):
         self.classification_report = sklearn.metrics.classification_report(self.true,self.predicted_class,output_dict=True)
         self.f2_score = sklearn.metrics.fbeta_score(self.true,self.predicted_class,beta=2, pos_label=1)
@@ -118,6 +122,7 @@ class Performance:
         self.report = {
             'classification_report': self.classification_report,
             'table': {
+                'threshold':self.threshold,
                 'precision':self.classification_report["1"]['precision'],
                 'recall':self.classification_report["1"]['recall'],
                 'f1-score':self.classification_report["1"]['f1-score'],
@@ -146,3 +151,41 @@ class Performance:
     def generate_report(self,report_location):
         with open(report_location, 'w', encoding='utf-8') as json_file:
             json.dump(self.report, json_file, indent=2, ensure_ascii=False, cls=NpEncoder)
+
+class ThresholdTuner:
+    def __init__(self,results_file):
+        results = np.loadtxt(results_file)
+        self.true = np.array(results[:,0],dtype=bool)
+        self.predicted_proba = results[:,3]
+    def tune(self,ratio=1):
+        thresholds = np.arange(0,1,0.01)
+        costs = np.array([ratio,1]) / (ratio + 1)
+        logger.info("costs: " + str(costs))
+        type_1_2_errors_sums = []
+
+        for threshold in thresholds:
+            predicted = self.predicted_proba >= threshold
+            confusion_matrix = sklearn.metrics.confusion_matrix(self.true,predicted)
+            FP = confusion_matrix[0,1]
+            FN = confusion_matrix[1,0]
+            TP = confusion_matrix[1,1]
+            TN = confusion_matrix[0,0]
+
+            FP = FP.astype(float)
+            FN = FN.astype(float)
+            TP = TP.astype(float)
+            TN = TN.astype(float)
+
+            total = FP + FN + TP + TN
+            nsp_i = FN + TP
+            N_show = total - nsp_i
+
+            type_1_error = FP/N_show
+            type_2_error = FN/nsp_i
+            type_1_2_errors_sum = (costs[0] * type_1_error + costs[1] * type_2_error)
+            type_1_2_errors_sums.append(type_1_2_errors_sum)
+
+        min_idx = np.argmin(type_1_2_errors_sums)
+        min_threshold = thresholds[min_idx]
+        logger.info("threshold: " + str(min_threshold))
+        return min_threshold
