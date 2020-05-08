@@ -123,9 +123,9 @@ class Performance:
         self.cost_effectiveness_2 = self.reduction_p / self.calls_p
 
         self.report = {
+            'threshold':self.threshold,
             'classification_report': self.classification_report,
             'table': {
-                'threshold':self.threshold,
                 'precision':self.classification_report["1"]['precision'],
                 'recall':self.classification_report["1"]['recall'],
                 'f1-score':self.classification_report["1"]['f1-score'],
