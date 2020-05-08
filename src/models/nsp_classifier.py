@@ -12,6 +12,8 @@ import imblearn.ensemble
 import joblib
 import json
 import logging
+import xgboost
+import sklearn.tree
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -135,6 +137,25 @@ models = [
             'replacement':[True, False]
         }
     ),
+    (
+        sklearn.ensemble.AdaBoostClassifier(),
+        {
+            'learning_rate': [0.01, 0.05, 0.1, 0.2, None],
+            'n_estimators': [50, 100, 200, 300, 500, 750, 1000],
+        }
+    ),
+    (
+        xgboost.XGBClassifier(),
+        {
+            'booster' : ['gblinear', 'gbtree'],
+            'learning_rate': [0.01, 0.05, 0.1, 0.2, None],
+            'n_estimators': [50, 100, 200, 300, 500, 750, 1000],
+            'max_depth': [2, 4, 8, 10, 30, 50, 80, None],
+            'subsample': [0.3, 0.5, 0.75, None],
+            'scale_pos_weight ':[3,4,5]
+        }
+    ),
+
 ]
 
 class NspModelDev:
@@ -239,9 +260,14 @@ class NspModelDev:
         for model in self.models:
             model_name = model[0].__class__.__name__
             estimator = joblib.load(models_location + model_name + ".joblib")
-            predictions_class = estimator.predict(features_test)
+            try:
+                predictions_class = estimator.predict(features_test)
+            except ValueError:
+                predictions_class = estimator.predict(features_test.values)
             try:
                 predictions_probs = estimator.predict_proba(features_test)
+            except ValueError:
+                predictions_probs = estimator.predict_proba(features_test.values)
             except:
                 predictions_probs = np.zeros((len(predictions_class),2))
             results = np.column_stack([label_test,predictions_class,predictions_probs])
