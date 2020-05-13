@@ -157,7 +157,7 @@ class ThresholdTuner:
         results = np.loadtxt(results_file)
         self.true = np.array(results[:,0],dtype=bool)
         self.predicted_proba = results[:,3]
-    def tune(self,ratio=1,min_calls_p=0.1):
+    def tune(self,ratio=1,min_calls_p=0.1,min_threshold=0.5):
         thresholds = np.arange(0,1,0.01)
         costs = np.array([ratio,1]) / (ratio + 1)
         logger.info("costs: " + str(costs))
@@ -189,8 +189,11 @@ class ThresholdTuner:
             type_1_2_errors_sums.append(type_1_2_errors_sum)
             calls_ps.append(calls_p)
         performances = np.column_stack([thresholds, calls_ps, type_1_2_errors_sums])
-        performances = performances[performances[:,1]>min_calls_p,:]
-        min_idx = np.argmin(performances[:,2])
-        min_threshold = performances[min_idx,0]
-        logger.info("threshold: " + str(min_threshold))
-        return min_threshold
+        performances = performances[(performances[:,1]>min_calls_p) & (performances[:,0]>min_threshold),:]
+        if performances.shape[0] > 0:
+            min_idx = np.argmin(performances[:,2])
+            min_threshold_calculated = performances[min_idx,0]
+        else:
+            min_threshold_calculated = 0.5
+        logger.info("threshold: " + str(min_threshold_calculated))
+        return min_threshold_calculated
