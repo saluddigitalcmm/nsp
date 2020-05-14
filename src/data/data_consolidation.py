@@ -69,3 +69,26 @@ class Consolidator:
         
         #Datos.to_csv('Base.csv', sep='\t', encoding='utf-8',index=True)
         self.Datos.to_csv(self.consolidated_data_location, encoding='utf-8',index=False)
+
+class ConsolidatorCrsco:
+    def __init__(self,raw_data_folder):
+        self.raw_files=[]
+        for filename in os.listdir(raw_data_folder):
+            if filename.endswith(".xlsx") and not filename.startswith("~$"):
+                self.raw_files.append(raw_data_folder+filename)
+        logger.info("files to consolidate: " + str(self.raw_files))
+    def consolidate(self,consolidated_filepath):
+        columns = ["Rut",u'FechadeNac', u'Sexo', u'Comuna', u'Prevision',
+                  u'Especialidad', u'TipoAtencion', 'TipoProfesional', 'CodigoPrestacion',
+                  u'FechaCita', u'EstadoCita', u'HoraCita']
+        dfs = []
+        for filename in self.raw_files:
+            logger.info(filename + " loading")
+            df = pd.read_excel(filename, parse_dates=['FechadeNac','FechaCita','HoraCita'])[columns]
+            dfs.append(df)
+            logger.info(df.shape)
+            df.dropna(inplace=True)
+            logger.info(df.shape)
+            logger.info(filename + " loaded")
+        self.data = pd.concat(dfs, axis=0, ignore_index=True)
+        self.data.to_csv(consolidated_filepath, index=False)
