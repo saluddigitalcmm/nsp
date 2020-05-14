@@ -149,3 +149,84 @@ class Featurizer:
         self.data.to_csv(data_location,index=False)
 
 
+class FeaturizerCrsco:
+    def __init__(self,interim_dataset_location):
+        self.data = pd.read_csv(interim_dataset_location)
+        logger.info("current shape: {}".format(self.data.shape))
+    def generate_basic_features(self):
+        self.data["FechaCita"] = pd.to_datetime(self.data["FechaCita"])
+        self.data["HoraCita"] = pd.to_datetime(self.data["HoraCita"])
+        self.data["FechadeNac"] = pd.to_datetime(self.data["FechadeNac"])
+        self.data["age"] = (self.data["FechaCita"]-self.data["FechadeNac"]).astype('timedelta64[D]')/365.25
+        self.data["month"] = self.data["FechaCita"].dt.month_name()
+        self.data["day"] = self.data["FechaCita"].dt.day_name()
+        self.data["hour"] = self.data["HoraCita"].dt.hour
+
+        self.data = self.data[self.data["EstadoCita"].isin(["Atendido","No Atendido"])]
+        self.data["NSP"] = np.where(self.data["EstadoCita"] == "No Atendido",1,0)
+
+        
+        logger.info("current shape: {}".format(self.data.shape))
+
+        self.data = self.data[(self.data["hour"] <= 17) & (self.data["hour"] >= 8)]
+        self.data["hour"] = self.data["hour"].astype('category')
+        logger.info("current shape: {}".format(self.data.shape))
+
+        self.data["age"] = pd.cut(self.data["age"],[0,0.5,5,12,18,26,59,100],right=False,include_lowest=True,labels=["lactante","infante_1","infante_2","adolescente","joven","adulto","adulto mayor"])
+        self.data_to_history = self.data[["Rut","Especialidad","FechaCita"]]
+
+        self.data = self.data.drop(columns=["Rut","FechaCita","HoraCita","FechadeNac","EstadoCita", 'CodigoPrestacion'], axis=1)
+        logger.info(self.data.columns)
+        self.data = pd.get_dummies(self.data)
+        logger.info("current shape: {}".format(self.data.shape))
+
+    def generate_history_feature(self,db_location):
+        conn = sqlite3.connect(db_location)
+        cur = conn.cursor()
+        def get_history_from_db(Rut,Especialidad,FechaCita,span):
+            cur.execute("""
+            SELECT sum(NSP) as NSP_count, count(NSP) as citation_count
+            FROM history
+            WHERE Rut = {}
+                AND Especialidad = "{}"
+                AND FechaCita >= date("{}", "-{} month")
+                AND FechaCita < date("{}")
+            """.format(Rut,Especialidad,FechaCita,span,FechaCita)
+            )
+            row = cur.fetchone()
+            if row[1] == 0:
+                p_NSP = 0.5
+            else:
+                try:
+                    p_NSP = row[0] / row[1]
+                except TypeError:
+                    p_NSP = 0.5
+            logger.info("{} {} {} {} {} {}".format(Rut,Especialidad,FechaCita,row[0],row[1],p_NSP))
+            return p_NSP
+
+        def get_history_from_db_simple(df):
+            history = pd.read_sql("""
+            
+            SELECT
+                Rut,
+                Especialidad,
+                sum(NSP) as NSP_count,
+                count(NSP) as citation_count
+            FROM
+                history
+            GROUP BY
+                Rut,
+                Especialidad
+            
+            """,conn)
+            logger.info(df.shape)
+            df = df.merge(history,on=["Rut","Especialidad"],how="left")
+            logger.info(df.shape)
+            return df["NSP_count"] / df["citation_count"]
+        logger.info(self.data.shape)
+        self.data["p_NSP"] = get_history_from_db_simple(self.data_to_history[["Rut","Especialidad"]]).fillna(value=0.5)
+
+    def write(self,data_location):
+        self.data.dropna(inplace=True)
+        logger.info(self.data.columns)
+        self.data.to_csv(data_location,index=False)
