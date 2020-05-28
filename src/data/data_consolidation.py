@@ -92,3 +92,28 @@ class ConsolidatorCrsco:
             logger.info(filename + " loaded")
         self.data = pd.concat(dfs, axis=0, ignore_index=True)
         self.data.to_csv(consolidated_filepath, index=False)
+
+class ConsolidatorHrt:
+    def __init__(self,raw_data_folder):
+        self.raw_files=[]
+        for filename in os.listdir(raw_data_folder):
+            if filename.endswith(".xlsx") and not filename.startswith("~$"):
+                self.raw_files.append(raw_data_folder+filename)
+        logger.info("files to consolidate: " + str(self.raw_files))
+    def consolidate(self,consolidated_filepath):
+        columns = ["RUT",u'FECHANAC', u'SEXO', u'COMUNA', u'PREVISION',
+                  u'ESPECIALIDAD', u'TIPO_ATENCION', 'TIPO_PROFESIONAL',
+                  u'FECHA_CITA', u'HORA_CITA', 'FECHA_RESERVA',u'FECHA_HORA_CONFIRMACION_CITA']
+        dfs = []
+        for filename in self.raw_files:
+            logger.info(filename + " loading")
+            data = pd.read_excel(filename, parse_dates=['FECHANAC','FECHA_CITA','HORA_CITA','FECHA_RESERVA'],sheet_name=None)
+            for sheet,df in data.items():
+                df = df[columns]
+                dfs.append(df)
+                logger.info(df.shape)
+                df.dropna(inplace=True,subset=columns[:-1])
+                logger.info(df.shape)
+                logger.info(filename + " sheet " + sheet + " loaded")
+        self.data = pd.concat(dfs, axis=0, ignore_index=True)
+        self.data.to_csv(consolidated_filepath, index=False)

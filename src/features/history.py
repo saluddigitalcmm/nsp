@@ -17,3 +17,18 @@ class HistoryCreator:
     def write_db(self,db_location):
         engine = create_engine(r'sqlite:///'+db_location, echo=True)
         self.data.to_sql('history', con=engine,if_exists="replace",index=False)
+
+class HistoryCreatorHrt:
+    def __init__(self,dataset,columns=["RUT","FECHA_CITA","ESPECIALIDAD"],label_column="FECHA_HORA_CONFIRMACION_CITA"):
+        self.data = pd.read_csv(dataset)[columns+[label_column]]
+        self.label_column = label_column
+        self.columns = columns
+    def create_history(self):
+        self.data["NSP"] = np.where(self.data[self.label_column].isna(),1,0)
+        self.data.drop(columns=[self.label_column], inplace=True, axis=1)
+        self.data[self.columns[1]] = pd.to_datetime(self.data[self.columns[1]]).dt.date
+        self.data.dropna(inplace=True)
+        self.data.drop_duplicates(inplace=True)
+    def write_db(self,db_location):
+        engine = create_engine(r'sqlite:///'+db_location, echo=True)
+        self.data.to_sql('history', con=engine,if_exists="replace",index=False)

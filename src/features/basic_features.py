@@ -230,3 +230,89 @@ class FeaturizerCrsco:
         self.data.dropna(inplace=True)
         logger.info(self.data.columns)
         self.data.to_csv(data_location,index=False)
+
+
+class FeaturizerHrt:
+    def __init__(self,interim_dataset_location):
+        self.data = pd.read_csv(interim_dataset_location)
+        logger.info("current shape: {}".format(self.data.shape))
+    def generate_basic_features(self):
+        self.data["FECHA_CITA"] = pd.to_datetime(self.data["FECHA_CITA"])
+        self.data["HORA_CITA"] = pd.to_datetime(self.data["HORA_CITA"])
+        self.data["FECHANAC"] = pd.to_datetime(self.data["FECHANAC"])
+        self.data["FECHA_RESERVA"] = pd.to_datetime(self.data["FECHA_RESERVA"])
+        self.data["delay"] = (self.data["FECHA_CITA"]-self.data["FECHA_RESERVA"]).astype('timedelta64[W]')
+        self.data["age"] = (self.data["FECHA_CITA"]-self.data["FECHANAC"]).astype('timedelta64[D]')/365.25
+        self.data["month"] = self.data["FECHA_CITA"].dt.month_name()
+        self.data["day"] = self.data["FECHA_CITA"].dt.day_name()
+        self.data["hour"] = self.data["HORA_CITA"].dt.hour
+
+        self.data["NSP"] = np.where(self.data["FECHA_HORA_CONFIRMACION_CITA"].isna(),1,0)
+
+        
+        logger.info("current shape: {}".format(self.data.shape))
+
+        self.data = self.data[(self.data["hour"] <= 17) & (self.data["hour"] >= 8)]
+        self.data = self.data[(self.data["delay"] <= 10) & (self.data["delay"] >= 0)]
+        self.data["delay"] = self.data["delay"].astype('category')
+        self.data["hour"] = self.data["hour"].astype('category')
+        logger.info("current shape: {}".format(self.data.shape))
+
+        self.data["age"] = pd.cut(self.data["age"],[0,0.5,5,12,18,26,59,100],right=False,include_lowest=True,labels=["lactante","infante_1","infante_2","adolescente","joven","adulto","adulto mayor"])
+        self.data_to_history = self.data[["RUT","ESPECIALIDAD","FECHA_CITA"]]
+
+        self.data = self.data.drop(columns=["RUT","FECHA_CITA","HORA_CITA","FECHANAC","FECHA_HORA_CONFIRMACION_CITA","FECHA_RESERVA"], axis=1)
+        logger.info(self.data.columns)
+        self.data = pd.get_dummies(self.data)
+        logger.info("current shape: {}".format(self.data.shape))
+
+    def generate_history_feature(self,db_location):
+        conn = sqlite3.connect(db_location)
+        cur = conn.cursor()
+        def get_history_from_db(RUT,ESPECIALIDAD,FECHA_CITA,span):
+            cur.execute("""
+            SELECT sum(NSP) as NSP_count, count(NSP) as citation_count
+            FROM history
+            WHERE RUT = {}
+                AND ESPECIALIDAD = "{}"
+                AND FECHA_CITA >= date("{}", "-{} month")
+                AND FECHA_CITA < date("{}")
+            """.format(RUT,ESPECIALIDAD,FECHA_CITA,span,FECHA_CITA)
+            )
+            row = cur.fetchone()
+            if row[1] == 0:
+                p_NSP = 0.5
+            else:
+                try:
+                    p_NSP = row[0] / row[1]
+                except TypeError:
+                    p_NSP = 0.5
+            logger.info("{} {} {} {} {} {}".format(RUT,ESPECIALIDAD,FECHA_CITA,row[0],row[1],p_NSP))
+            return p_NSP
+
+        def get_history_from_db_simple(df):
+            history = pd.read_sql("""
+            
+            SELECT
+                RUT,
+                ESPECIALIDAD,
+                sum(NSP) as NSP_count,
+                count(NSP) as citation_count
+            FROM
+                history
+            GROUP BY
+                RUT,
+                ESPECIALIDAD
+            
+            """,conn)
+            logger.info(df.shape)
+            df = df.merge(history,on=["RUT","ESPECIALIDAD"],how="left")
+            logger.info(df.shape)
+            return df["NSP_count"] / df["citation_count"]
+        logger.info(self.data.shape)
+        self.data["p_NSP"] = get_history_from_db_simple(self.data_to_history[["RUT","ESPECIALIDAD"]]).fillna(value=0.5)
+
+    def write(self,data_location):
+        self.data.dropna(inplace=True)
+        logger.info(self.data.columns)
+        self.data.to_csv(data_location,index=False)
