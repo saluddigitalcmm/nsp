@@ -223,8 +223,28 @@ class FeaturizerCrsco:
             df = df.merge(history,on=["Rut","Especialidad"],how="left")
             logger.info(df.shape)
             return df["NSP_count"] / df["citation_count"]
+        
+        def get_history_from_db_simple_general(df):
+            history = pd.read_sql("""
+            
+            SELECT
+                Rut,
+                sum(NSP) as NSP_count,
+                count(NSP) as citation_count
+            FROM
+                history
+            GROUP BY
+                Rut
+            
+            """,conn)
+            logger.info(df.shape)
+            df = df.merge(history,on=["Rut"],how="left")
+            logger.info(df.shape)
+            return df["NSP_count"] / df["citation_count"]
+
         logger.info(self.data.shape)
         self.data["p_NSP"] = get_history_from_db_simple(self.data_to_history[["Rut","Especialidad"]]).fillna(value=0.5)
+        self.data["p_NSP_g"] = get_history_from_db_simple_general(self.data_to_history[["Rut"]]).fillna(value=0.5)
 
     def write(self,data_location):
         self.data.dropna(inplace=True)
@@ -309,8 +329,26 @@ class FeaturizerHrt:
             df = df.merge(history,on=["RUT","ESPECIALIDAD"],how="left")
             logger.info(df.shape)
             return df["NSP_count"] / df["citation_count"]
+        def get_history_from_db_simple_general(df):
+            history = pd.read_sql("""
+            
+            SELECT
+                RUT,
+                sum(NSP) as NSP_count,
+                count(NSP) as citation_count
+            FROM
+                history
+            GROUP BY
+                RUT
+            
+            """,conn)
+            logger.info(df.shape)
+            df = df.merge(history,on=["RUT"],how="left")
+            logger.info(df.shape)
+            return df["NSP_count"] / df["citation_count"]
         logger.info(self.data.shape)
         self.data["p_NSP"] = get_history_from_db_simple(self.data_to_history[["RUT","ESPECIALIDAD"]]).fillna(value=0.5)
+        self.data["p_NSP_g"] = get_history_from_db_simple_general(self.data_to_history[["RUT"]]).fillna(value=0.5)
 
     def write(self,data_location):
         self.data.dropna(inplace=True)
