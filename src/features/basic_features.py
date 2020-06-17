@@ -259,6 +259,7 @@ class FeaturizerHrt:
         logger.info("current shape: {}".format(self.data.shape))
     def generate_basic_features(self):
         self.data["FECHA_CITA"] = pd.to_datetime(self.data["FECHA_CITA"])
+        self.data.sort_values(by="FECHA_CITA",ascending=True,inplace=True)
         self.data["HORA_CITA"] = pd.to_datetime(self.data["HORA_CITA"])
         self.data["FECHANAC"] = pd.to_datetime(self.data["FECHANAC"])
         self.data["FECHA_RESERVA"] = pd.to_datetime(self.data["FECHA_RESERVA"])
