@@ -22,7 +22,7 @@ class Splitter:
         self.features = self.data.drop(columns=[label], axis=1)
         self.data = None
     def split(self,location, resampler = "SMOTE"):
-        self.features_train, self.features_test, self.label_train, self.label_test = sklearn.model_selection.train_test_split(self.features, self.label, test_size=0.33, random_state=11, stratify=self.label)
+        self.features_train, self.features_test, self.label_train, self.label_test = sklearn.model_selection.train_test_split(self.features, self.label, test_size=0.33, shuffle=False)
         if resampler == "SMOTE":
             resampler = imblearn.over_sampling.SMOTE(random_state=11)
         if resampler == "RandomUnderSampler":
