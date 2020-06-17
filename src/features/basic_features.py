@@ -155,6 +155,7 @@ class FeaturizerCrsco:
         logger.info("current shape: {}".format(self.data.shape))
     def generate_basic_features(self):
         self.data["FechaCita"] = pd.to_datetime(self.data["FechaCita"])
+        self.data.sort_values(by="FechaCita",ascending=True,inplace=True)
         self.data["HoraCita"] = pd.to_datetime(self.data["HoraCita"])
         self.data["FechadeNac"] = pd.to_datetime(self.data["FechadeNac"])
         self.data["age"] = (self.data["FechaCita"]-self.data["FechadeNac"]).astype('timedelta64[D]')/365.25
