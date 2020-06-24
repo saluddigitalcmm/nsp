@@ -7,17 +7,33 @@ from io import StringIO
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def get_historic_p(db_location,citation_date_column,grouping_columns,nsp_column,nsp_p_column_name):
+    history = pd.read_sql_table("history", f'sqlite:///{db_location}').sort_values(by=citation_date_column)
+    history["citations_cumcount"] = history.groupby(by=grouping_columns)[nsp_column].cumcount()
+    history["nsp_cumsum"] = history.groupby(by=grouping_columns)[nsp_column].cumsum()
+    history[nsp_p_column_name] = history["nsp_cumsum"] / history["citations_cumcount"]
+    history[nsp_p_column_name] = np.where(history["citations_cumcount"] == 0,0.5,history[nsp_p_column_name])
+    del history["citations_cumcount"]
+    del history["nsp_cumsum"]
+    return history
 class Featurizer:
     def __init__(self,interim_dataset_location):
         self.data = pd.read_csv(interim_dataset_location)
         logger.info("current shape: {}".format(self.data.shape))
-    def generate_basic_features(self,use_reserve=True, idx="PAID"):
+    def generate_basic_features(self,use_reserve=True, idx="PAID",db_location="data/processed/history2.sqlite"):
+        self.idx = idx
         self.data["FechaCita"] = pd.to_datetime(self.data["FechaCita"])
         self.data["HoraCita"] = pd.to_datetime(self.data["HoraCita"])
         self.data["FechaNac"] = pd.to_datetime(self.data["FechaNac"])
         if use_reserve:
             self.data["FechaReserva"] = pd.to_datetime(self.data["FechaReserva"])
             self.data["delay"] = (self.data["FechaCita"]-self.data["FechaReserva"]).astype('timedelta64[W]')
+        
+        self.historic_p_s = get_historic_p(db_location,"FechaCita",[self.idx,"Especialidad"],"NSP","nsp_p")
+        self.historic_p_g = get_historic_p(db_location,"FechaCita",[self.idx],"NSP","nsp_p_g")
+        self.data = self.data.merge(self.historic_p_s,how="left")
+        self.data = self.data.merge(self.historic_p_g,how="left")
+        
         self.data["age"] = (self.data["FechaCita"]-self.data["FechaNac"]).astype('timedelta64[D]')/365.25
         self.data["month"] = self.data["FechaCita"].dt.month_name()
         self.data["day"] = self.data["FechaCita"].dt.day_name()
@@ -101,72 +117,7 @@ class Featurizer:
         logger.info(self.data.columns)
         self.data = pd.get_dummies(self.data)
         logger.info("current shape: {}".format(self.data.shape))
-        self.idx = idx
-
-    def generate_history_feature(self,db_location):
-        conn = sqlite3.connect(db_location)
-        cur = conn.cursor()
-        def get_history_from_db(idx,idx_name,Especialidad,FechaCita,span):
-            cur.execute("""
-            SELECT sum(NSP) as NSP_count, count(NSP) as citation_count
-            FROM history
-            WHERE {} = {}
-                AND Especialidad = "{}"
-                AND FechaCita >= date("{}", "-{} month")
-                AND FechaCita < date("{}")
-            """.format(idx,idx_name,Especialidad,FechaCita,span,FechaCita)
-            )
-            row = cur.fetchone()
-            if row[1] == 0:
-                p_NSP = 0.5
-            else:
-                try:
-                    p_NSP = row[0] / row[1]
-                except TypeError:
-                    p_NSP = 0.5
-            logger.info("{} {} {} {} {} {}".format(idx,Especialidad,FechaCita,row[0],row[1],p_NSP))
-            return p_NSP
-
-        def get_history_from_db_simple(df):
-            history = pd.read_sql("""
-            
-            SELECT
-                {},
-                Especialidad,
-                sum(NSP) as NSP_count,
-                count(NSP) as citation_count
-            FROM
-                history
-            GROUP BY
-                {},
-                Especialidad
-            
-            """.format(self.idx,self.idx),conn)
-            logger.info(df.shape)
-            df = df.merge(history,on=[self.idx,"Especialidad"],how="left")
-            logger.info(df.shape)
-            return df["NSP_count"] / df["citation_count"]
-        def get_history_from_db_simple_general(df):
-            history = pd.read_sql("""
-            
-            SELECT
-                {},
-                sum(NSP) as NSP_count,
-                count(NSP) as citation_count
-            FROM
-                history
-            GROUP BY
-                {}
-            
-            """.format(self.idx,self.idx),conn)
-            logger.info(df.shape)
-            df = df.merge(history,on=[self.idx],how="left")
-            logger.info(df.shape)
-            return df["NSP_count"] / df["citation_count"]
-        logger.info(self.data.shape)
-        self.data["p_NSP"] = get_history_from_db_simple(self.data_to_history[[self.idx,"Especialidad"]])
-        self.data["p_NSP_g"] = get_history_from_db_simple_general(self.data_to_history[[self.idx]])
-
+        
     def write(self,data_location):
         self.data.dropna(inplace=True)
         logger.info(self.data.columns)
