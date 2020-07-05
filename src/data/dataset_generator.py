@@ -57,9 +57,12 @@ class SplitterBySpecialty:
         self.specialty_groups = {name:group for name,group in self.data.groupby("specialty")}
     def split(self,location,resampler = None):
         for specialty,data in self.specialty_groups.items():
-            data.drop("specialty",axis=1,inplace=True)
-            specialty_folder = location + specialty + "/"
-            if os.path.exists(specialty_folder) == False:
-                os.mkdir(specialty_folder)
-            s = SplitterFromDF(data)
-            s.split(specialty_folder, resampler = resampler)
+            try:
+                data.drop("specialty",axis=1,inplace=True)
+                specialty_folder = location + specialty + "/"
+                if os.path.exists(specialty_folder) == False:
+                    os.mkdir(specialty_folder)
+                s = SplitterFromDF(data)
+                s.split(specialty_folder, resampler = resampler)
+            except ValueError:
+                pass
