@@ -128,11 +128,17 @@ class FeaturizerCrsco:
     def __init__(self,interim_dataset_location):
         self.data = pd.read_csv(interim_dataset_location)
         logger.info("current shape: {}".format(self.data.shape))
-    def generate_basic_features(self):
+    def generate_basic_features(self,idx="Rut",db_location="data/processed/crsco_history.sqlite"):
         self.data["FechaCita"] = pd.to_datetime(self.data["FechaCita"])
         self.data.sort_values(by="FechaCita",ascending=True,inplace=True)
         self.data["HoraCita"] = pd.to_datetime(self.data["HoraCita"])
         self.data["FechadeNac"] = pd.to_datetime(self.data["FechadeNac"])
+        
+        self.historic_p_s = get_historic_p(db_location,"FechaCita",[idx,"Especialidad"],"NSP","nsp_p")
+        self.historic_p_g = get_historic_p(db_location,"FechaCita",[idx],"NSP","nsp_p_g")
+        self.data = self.data.merge(self.historic_p_s,how="left")
+        self.data = self.data.merge(self.historic_p_g,how="left")
+
         self.data["age"] = (self.data["FechaCita"]-self.data["FechadeNac"]).astype('timedelta64[D]')/365.25
         self.data["month"] = self.data["FechaCita"].dt.month_name()
         self.data["day"] = self.data["FechaCita"].dt.day_name()
@@ -149,78 +155,11 @@ class FeaturizerCrsco:
         logger.info("current shape: {}".format(self.data.shape))
 
         self.data["age"] = pd.cut(self.data["age"],[0,0.5,5,12,18,26,59,100],right=False,include_lowest=True,labels=["lactante","infante_1","infante_2","adolescente","joven","adulto","adulto mayor"])
-        self.data_to_history = self.data[["Rut","Especialidad","FechaCita"]]
 
         self.data = self.data.drop(columns=["Rut","FechaCita","HoraCita","FechadeNac","EstadoCita", 'CodigoPrestacion'], axis=1)
         logger.info(self.data.columns)
         self.data = pd.get_dummies(self.data)
         logger.info("current shape: {}".format(self.data.shape))
-
-    def generate_history_feature(self,db_location):
-        conn = sqlite3.connect(db_location)
-        cur = conn.cursor()
-        def get_history_from_db(Rut,Especialidad,FechaCita,span):
-            cur.execute("""
-            SELECT sum(NSP) as NSP_count, count(NSP) as citation_count
-            FROM history
-            WHERE Rut = {}
-                AND Especialidad = "{}"
-                AND FechaCita >= date("{}", "-{} month")
-                AND FechaCita < date("{}")
-            """.format(Rut,Especialidad,FechaCita,span,FechaCita)
-            )
-            row = cur.fetchone()
-            if row[1] == 0:
-                p_NSP = 0.5
-            else:
-                try:
-                    p_NSP = row[0] / row[1]
-                except TypeError:
-                    p_NSP = 0.5
-            logger.info("{} {} {} {} {} {}".format(Rut,Especialidad,FechaCita,row[0],row[1],p_NSP))
-            return p_NSP
-
-        def get_history_from_db_simple(df):
-            history = pd.read_sql("""
-            
-            SELECT
-                Rut,
-                Especialidad,
-                sum(NSP) as NSP_count,
-                count(NSP) as citation_count
-            FROM
-                history
-            GROUP BY
-                Rut,
-                Especialidad
-            
-            """,conn)
-            logger.info(df.shape)
-            df = df.merge(history,on=["Rut","Especialidad"],how="left")
-            logger.info(df.shape)
-            return df["NSP_count"] / df["citation_count"]
-        
-        def get_history_from_db_simple_general(df):
-            history = pd.read_sql("""
-            
-            SELECT
-                Rut,
-                sum(NSP) as NSP_count,
-                count(NSP) as citation_count
-            FROM
-                history
-            GROUP BY
-                Rut
-            
-            """,conn)
-            logger.info(df.shape)
-            df = df.merge(history,on=["Rut"],how="left")
-            logger.info(df.shape)
-            return df["NSP_count"] / df["citation_count"]
-
-        logger.info(self.data.shape)
-        self.data["p_NSP"] = get_history_from_db_simple(self.data_to_history[["Rut","Especialidad"]]).fillna(value=0.5)
-        self.data["p_NSP_g"] = get_history_from_db_simple_general(self.data_to_history[["Rut"]]).fillna(value=0.5)
 
     def write(self,data_location):
         self.data.dropna(inplace=True)
