@@ -171,11 +171,17 @@ class FeaturizerHrt:
     def __init__(self,interim_dataset_location):
         self.data = pd.read_csv(interim_dataset_location)
         logger.info("current shape: {}".format(self.data.shape))
-    def generate_basic_features(self):
+    def generate_basic_features(self,idx="RUT",db_location="data/processed/hrt_history.sqlite"):
         self.data["FECHA_CITA"] = pd.to_datetime(self.data["FECHA_CITA"])
         self.data.sort_values(by="FECHA_CITA",ascending=True,inplace=True)
         self.data["HORA_CITA"] = pd.to_datetime(self.data["HORA_CITA"])
         self.data["FECHANAC"] = pd.to_datetime(self.data["FECHANAC"])
+
+        self.historic_p_s = get_historic_p(db_location,"FECHA_CITA",[idx,"ESPECIALIDAD"],"NSP","nsp_p")
+        self.historic_p_g = get_historic_p(db_location,"FECHA_CITA",[idx],"NSP","nsp_p_g")
+        self.data = self.data.merge(self.historic_p_s,how="left")
+        self.data = self.data.merge(self.historic_p_g,how="left")
+
         self.data["FECHA_RESERVA"] = pd.to_datetime(self.data["FECHA_RESERVA"])
         self.data["delay"] = (self.data["FECHA_CITA"]-self.data["FECHA_RESERVA"]).astype('timedelta64[W]')
         self.data["age"] = (self.data["FECHA_CITA"]-self.data["FECHANAC"]).astype('timedelta64[D]')/365.25
@@ -201,70 +207,6 @@ class FeaturizerHrt:
         logger.info(self.data.columns)
         self.data = pd.get_dummies(self.data)
         logger.info("current shape: {}".format(self.data.shape))
-
-    def generate_history_feature(self,db_location):
-        conn = sqlite3.connect(db_location)
-        cur = conn.cursor()
-        def get_history_from_db(RUT,ESPECIALIDAD,FECHA_CITA,span):
-            cur.execute("""
-            SELECT sum(NSP) as NSP_count, count(NSP) as citation_count
-            FROM history
-            WHERE RUT = {}
-                AND ESPECIALIDAD = "{}"
-                AND FECHA_CITA >= date("{}", "-{} month")
-                AND FECHA_CITA < date("{}")
-            """.format(RUT,ESPECIALIDAD,FECHA_CITA,span,FECHA_CITA)
-            )
-            row = cur.fetchone()
-            if row[1] == 0:
-                p_NSP = 0.5
-            else:
-                try:
-                    p_NSP = row[0] / row[1]
-                except TypeError:
-                    p_NSP = 0.5
-            logger.info("{} {} {} {} {} {}".format(RUT,ESPECIALIDAD,FECHA_CITA,row[0],row[1],p_NSP))
-            return p_NSP
-
-        def get_history_from_db_simple(df):
-            history = pd.read_sql("""
-            
-            SELECT
-                RUT,
-                ESPECIALIDAD,
-                sum(NSP) as NSP_count,
-                count(NSP) as citation_count
-            FROM
-                history
-            GROUP BY
-                RUT,
-                ESPECIALIDAD
-            
-            """,conn)
-            logger.info(df.shape)
-            df = df.merge(history,on=["RUT","ESPECIALIDAD"],how="left")
-            logger.info(df.shape)
-            return df["NSP_count"] / df["citation_count"]
-        def get_history_from_db_simple_general(df):
-            history = pd.read_sql("""
-            
-            SELECT
-                RUT,
-                sum(NSP) as NSP_count,
-                count(NSP) as citation_count
-            FROM
-                history
-            GROUP BY
-                RUT
-            
-            """,conn)
-            logger.info(df.shape)
-            df = df.merge(history,on=["RUT"],how="left")
-            logger.info(df.shape)
-            return df["NSP_count"] / df["citation_count"]
-        logger.info(self.data.shape)
-        self.data["p_NSP"] = get_history_from_db_simple(self.data_to_history[["RUT","ESPECIALIDAD"]]).fillna(value=0.5)
-        self.data["p_NSP_g"] = get_history_from_db_simple_general(self.data_to_history[["RUT"]]).fillna(value=0.5)
 
     def write(self,data_location):
         self.data.dropna(inplace=True)
