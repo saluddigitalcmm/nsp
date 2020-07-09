@@ -124,7 +124,7 @@ models = [
         {
             'bootstrap': [True, False],
             'bootstrap_features': [True, False],
-            'warm_start':[True, False],
+            'warm_start':[False],
             'replacement':[True, False],
             'n_estimators': [10,50, 100, 200, 500, 1000, 1200, 1400, 1600, 1800]
         }
@@ -133,7 +133,7 @@ models = [
         imblearn.ensemble.EasyEnsembleClassifier(),
         {
             'n_estimators': [10,50, 100, 200, 500, 1000, 1200, 1400, 1600, 1800],
-            'warm_start':[True, False],
+            'warm_start':[False],
             'replacement':[True, False]
         }
     ),
