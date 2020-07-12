@@ -231,7 +231,7 @@ class NspModelDev:
             self.cv_scores[model_name] = cv_scores
             with open(report_location + 'cross_val_' + model_name + '.json', 'w', encoding='utf-8') as json_file:
                 json.dump(self.cv_scores[model_name], json_file, indent=2, ensure_ascii=False, cls=NpEncoder)
-    def train_best_models(self,models_location,grid_search_results_location,complete=True):
+    def train_best_models(self,models_location,grid_search_results_location,n_jobs=-1,complete=True):
         if complete:
             features = self.train_complete[:,:-1]
             label = self.train_complete[:,-1]
@@ -245,7 +245,7 @@ class NspModelDev:
                 data = json.load(read_file)
             best_hp=data[1]
             try:
-                estimator.set_params(**best_hp,n_jobs=-1,verbose=2)
+                estimator.set_params(**best_hp,n_jobs=n_jobs,verbose=2)
             except:
                 try:
                     estimator.set_params(**best_hp,verbose=2)
