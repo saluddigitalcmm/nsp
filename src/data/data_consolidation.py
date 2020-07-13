@@ -117,9 +117,10 @@ class ConsolidatorHrt:
             data = pd.read_excel(filename, parse_dates=['FECHANAC','FECHA_CITA','HORA_CITA','FECHA_RESERVA'],sheet_name=None)
             for sheet,df in data.items():
                 df = df[columns]
-                dfs.append(df)
                 logger.info(df.shape)
+                df["ESPECIALIDAD"] = df.ESPECIALIDAD.str.extract(r'(.*) - ',expand=False)
                 df.dropna(inplace=True,subset=columns[:-1])
+                dfs.append(df)
                 logger.info(df.shape)
                 logger.info(filename + " sheet " + sheet + " loaded")
         self.data = pd.concat(dfs, axis=0, ignore_index=True)
