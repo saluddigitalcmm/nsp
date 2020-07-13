@@ -50,10 +50,10 @@ class SplitterFromDF(Splitter):
 class SplitterBySpecialty:
     def __init__(self,data,specialty_column="Especialidad"):
         self.data = pd.read_csv(data)
-        specialties = self.data.filter(regex=r"Especialidad",axis=1).idxmax(axis=1)
-        self.data["specialty"] = specialties.str.replace("Especialidad_","")
+        specialties = self.data.filter(regex=specialty_column,axis=1).idxmax(axis=1)
+        self.data["specialty"] = specialties.str.replace(specialty_column + "_","")
         self.data["specialty"] = self.data["specialty"].apply(normalizer)
-        self.data = self.data[self.data.columns.drop(list(self.data.filter(regex='Especialidad',axis=1)))]
+        self.data = self.data[self.data.columns.drop(list(self.data.filter(regex=specialty_column,axis=1)))]
         self.specialty_groups = {name:group for name,group in self.data.groupby("specialty")}
     def split(self,location,resampler = None):
         for specialty,data in self.specialty_groups.items():
