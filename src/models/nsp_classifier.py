@@ -48,7 +48,7 @@ geometric_mean_scorer = sklearn.metrics.make_scorer(imblearn.metrics.geometric_m
 
 f2_scorer = sklearn.metrics.make_scorer(sklearn.metrics.fbeta_score, beta=2, pos_label=1)
 
-class NpEncoder(json.JSONEncoder):
+class Encoder(json.JSONEncoder):
     def default(self, obj): # pylint: disable=E0202
         if isinstance(obj, np.integer):
             return int(obj)
@@ -56,8 +56,10 @@ class NpEncoder(json.JSONEncoder):
             return float(obj)
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
+        elif isinstance(obj, sklearn.tree.DecisionTreeClassifier):
+            return obj.__class__.__name__
         else:
-            return super(NpEncoder, self).default(obj)
+            return super(Encoder, self).default(obj)
 
 models = [
     (
@@ -197,7 +199,7 @@ class NspModelDev:
             grid_search.fit(features,labels)
             self.gs_scores[model_name] = [grid_search.cv_results_,grid_search.best_params_,grid_search.best_score_]
             with open(report_location + 'grid_search_' + model_name + '.json', 'w', encoding='utf-8') as json_file:
-                json.dump(self.gs_scores[model_name], json_file, indent=2, ensure_ascii=False, cls=NpEncoder)
+                json.dump(self.gs_scores[model_name], json_file, indent=2, ensure_ascii=False, cls=Encoder)
     def train_models(self, grid_search_results_location,n_jobs,report_location):
         self.cv_scores = {}
         for model in self.models:
@@ -230,7 +232,7 @@ class NspModelDev:
             )
             self.cv_scores[model_name] = cv_scores
             with open(report_location + 'cross_val_' + model_name + '.json', 'w', encoding='utf-8') as json_file:
-                json.dump(self.cv_scores[model_name], json_file, indent=2, ensure_ascii=False, cls=NpEncoder)
+                json.dump(self.cv_scores[model_name], json_file, indent=2, ensure_ascii=False, cls=Encoder)
     def train_best_models(self,models_location,grid_search_results_location,n_jobs=-1,complete=True):
         if complete:
             features = self.train_complete[:,:-1]
