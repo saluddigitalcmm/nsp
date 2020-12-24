@@ -44,8 +44,10 @@ class Consolidator:
             logger.info("citas_datos shape: {}".format(self.citas_datos.shape))
             self.citas_datos.dropna(inplace=True)
             logger.info("citas_datos shape: {}".format(self.citas_datos.shape))
+            self.use_citas_datos = True
         else:
             self.citas_datos = None
+            self.use_citas_datos = False
         logger.info('Leer todos los excels para compilarlos')
         for archivo in self.newlist_Informe:
 
@@ -66,7 +68,7 @@ class Consolidator:
         logger.info("Datos shape: {}".format(self.Datos.shape))
         self.Datos.dropna(inplace=True)
         logger.info("Datos shape: {}".format(self.Datos.shape))
-        if self.citas_datos != None:
+        if self.use_citas_datos:
             self.Datos = self.Datos.merge(self.citas_datos[['FechaNac','FechaCita','CodPrestacion','FechaReserva']],how="left")
         logger.info("Datos shape: {}".format(self.Datos.shape))
         logger.info(self.Datos.columns)
