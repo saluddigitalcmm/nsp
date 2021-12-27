@@ -19,7 +19,7 @@ class HistoryCreator:
         self.data.to_sql('history', con=engine,if_exists="replace",index=False)
 
 class HistoryCreatorHrt:
-    def __init__(self,dataset,columns=["RUT","FECHA_CITA","ESPECIALIDAD"],label_column="FECHA_HORA_CONFIRMACION_CITA"):
+    def __init__(self,dataset,columns=["RUT","FECHA_CITA","ESPECIALIDAD"],label_column="FECHA_CONFIRMACION"):
         self.data = pd.read_csv(dataset)[columns+[label_column]]
         self.label_column = label_column
         self.columns = columns
