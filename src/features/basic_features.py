@@ -189,7 +189,7 @@ class FeaturizerHrt:
         self.data["day"] = self.data["FECHA_CITA"].dt.day_name()
         self.data["hour"] = self.data["HORA_CITA"].dt.hour
 
-        self.data["NSP"] = np.where(self.data["FECHA_HORA_CONFIRMACION_CITA"].isna(),1,0)
+        self.data["NSP"] = np.where(self.data["FECHA_CONFIRMACION"].isna(),1,0)
 
         
         logger.info("current shape: {}".format(self.data.shape))
@@ -203,7 +203,7 @@ class FeaturizerHrt:
         self.data["age"] = pd.cut(self.data["age"],[0,0.5,5,12,18,26,59,100],right=False,include_lowest=True,labels=["lactante","infante_1","infante_2","adolescente","joven","adulto","adulto mayor"])
         self.data_to_history = self.data[["RUT","ESPECIALIDAD","FECHA_CITA"]]
 
-        self.data = self.data.drop(columns=["RUT","FECHA_CITA","HORA_CITA","FECHANAC","FECHA_HORA_CONFIRMACION_CITA","FECHA_RESERVA"], axis=1)
+        self.data = self.data.drop(columns=["RUT","FECHA_CITA","HORA_CITA","FECHANAC","FECHA_CONFIRMACION","FECHA_RESERVA"], axis=1)
         logger.info(self.data.columns)
         self.data = pd.get_dummies(self.data)
         logger.info("current shape: {}".format(self.data.shape))
