@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
 import pandas as pd
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 import os
 import re
@@ -110,9 +110,9 @@ class ConsolidatorHrt:
                 self.raw_files.append(raw_data_folder+filename)
         logger.info("files to consolidate: " + str(self.raw_files))
     def consolidate(self,consolidated_filepath):
-        columns = ["RUT",u'FECHANAC', u'SEXO', u'COMUNA', u'PREVISION',
+        columns = ["RUT",u'FECHANAC', u'SEXO', u'COMUNA', u'FONASA',
                   u'ESPECIALIDAD', u'TIPO_ATENCION', 'TIPO_PROFESIONAL',
-                  u'FECHA_CITA', u'HORA_CITA', 'FECHA_RESERVA',u'FECHA_HORA_CONFIRMACION_CITA']
+                  u'FECHA_CITA', u'HORA_CITA', 'FECHA_RESERVA',u'FECHA_CONFIRMACION']
         dfs = []
         for filename in self.raw_files:
             logger.info(filename + " loading")
