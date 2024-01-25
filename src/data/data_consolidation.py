@@ -110,9 +110,9 @@ class ConsolidatorHrt:
                 self.raw_files.append(raw_data_folder+filename)
         logger.info("files to consolidate: " + str(self.raw_files))
     def consolidate(self,consolidated_filepath):
-        columns = ["RUT",u'FECHANAC', u'SEXO', u'COMUNA', u'FONASA',
+        columns = ["RUT",u'FECHANAC', u'SEXO', u'COMUNA',
                   u'ESPECIALIDAD', u'TIPO_ATENCION', 'TIPO_PROFESIONAL',
-                  u'FECHA_CITA', u'HORA_CITA', 'FECHA_RESERVA',u'FECHA_CONFIRMACION']
+                  u'FECHA_CITA', u'HORA_CITA', 'FECHA_RESERVA', u'FECHA_HORA_CONFIRMACION_CITA']
         dfs = []
         for filename in self.raw_files:
             logger.info(filename + " loading")
