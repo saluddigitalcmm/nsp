@@ -8,3 +8,5 @@ __pycache__
 test*.py
 /logs
 /nsp
+venv
+/scripts
