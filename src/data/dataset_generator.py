@@ -33,8 +33,8 @@ class Splitter:
             resampler = imblearn.combine.SMOTEENN(random_state=11)
         if resampler != None:
             self.features_train_resampled, self.label_train_resampled = resampler.fit_resample(self.features_train, self.label_train)
-            self.features_train_resampled.to_csv(location+"features_train_resampled_"+resampler+".csv",index=False)
-            self.label_train_resampled.to_csv(location+"label_train_resampled_"+resampler+".csv",index=False,header=True)
+            self.features_train_resampled.to_csv(f'{location}features_train_resampled_{resampler}.csv', index=False)
+            self.label_train_resampled.to_csv(f'{location}label_train_resampled_{resampler}.csv',index=False,header=True)
         self.features_train.to_csv(location+"features_train.csv",index=False)
         self.label_train.to_csv(location+"label_train.csv",index=False,header=True)
         self.features_test.to_csv(location+"features_test.csv",index=False)
