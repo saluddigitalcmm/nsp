@@ -25,4 +25,6 @@ class CrossValVisualizer:
         plt.ylabel('F2 Score')
         plt.xticks(rotation=45)
         plt.tight_layout()
+        if os.path.exists(os.path.dirname(figure_location)) == False:
+            os.makedirs(os.path.dirname(figure_location))
         plt.savefig(figure_location)

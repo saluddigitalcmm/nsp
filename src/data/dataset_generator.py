@@ -12,6 +12,7 @@ def normalizer(text, remove_tildes = True): #normalizes a given string to lowerc
         text = re.sub('í', 'i', text)
         text = re.sub('ó', 'o', text)
         text = re.sub('ú', 'u', text)
+        text= re.sub('\s+(?=\S*$)', '', text)
     return text
 
 
@@ -61,7 +62,7 @@ class SplitterBySpecialty:
                 data.drop("specialty",axis=1,inplace=True)
                 specialty_folder = location + specialty + "/"
                 if os.path.exists(specialty_folder) == False:
-                    os.mkdir(specialty_folder)
+                    os.makedirs(specialty_folder)
                 s = SplitterFromDF(data)
                 s.split(specialty_folder, resampler = resampler)
             except ValueError:

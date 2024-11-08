@@ -149,6 +149,12 @@ class Performance:
             'roc_curve': self.roc_curve
         }
     def generate_report(self,report_location):
+        """
+            if os.path.exists(report_location) == False:
+                os.makedirs(report_location)
+        """
+
+
         with open(report_location, 'w', encoding='utf-8') as json_file:
             json.dump(self.report, json_file, indent=2, ensure_ascii=False, cls=NpEncoder)
 

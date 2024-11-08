@@ -4,6 +4,8 @@ import logging
 import numpy as np
 import sqlite3
 from io import StringIO
+
+from src.schemas.col_names import HlcmDataColNames
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -20,27 +22,60 @@ class Featurizer:
     def __init__(self,interim_dataset_location):
         self.data = pd.read_csv(interim_dataset_location)
         logger.info("current shape: {}".format(self.data.shape))
-    def generate_basic_features(self,use_reserve=True, idx="PAID",db_location="data/processed/history2.sqlite"):
+    def generate_basic_features(
+        self,
+        use_reserve=True,
+        idx="PAID",
+        db_location="data/processed/history2.sqlite",
+        colnames=HlcmDataColNames
+    ):
         self.idx = idx
-        self.data["FechaCita"] = pd.to_datetime(self.data["FechaCita"])
-        self.data["HoraCita"] = pd.to_datetime(self.data["HoraCita"])
-        self.data["FechaNac"] = pd.to_datetime(self.data["FechaNac"])
+        self.data[colnames.FechaCitaColName.value] = pd.to_datetime(
+            self.data[colnames.FechaCitaColName.value]
+        )
+        self.data[colnames.HoraCitaColName.value] = pd.to_datetime(
+            self.data[colnames.HoraCitaColName.value]
+            )
+        self.data[colnames.FechaNacColName.value] = pd.to_datetime(
+            self.data[colnames.FechaNacColName.value]
+        )
         if use_reserve:
             self.data["FechaReserva"] = pd.to_datetime(self.data["FechaReserva"])
-            self.data["delay"] = (self.data["FechaCita"]-self.data["FechaReserva"]).astype('timedelta64[W]')
+            self.data["delay"] = (
+                self.data[colnames.FechaCitaColName.value] - 
+                self.data["FechaReserva"]
+            ).astype('timedelta64[W]')
         
-        self.historic_p_s = get_historic_p(db_location,"FechaCita",[self.idx,"Especialidad"],"NSP","nsp_p")
-        self.historic_p_g = get_historic_p(db_location,"FechaCita",[self.idx],"NSP","nsp_p_g")
+        self.historic_p_s = get_historic_p(
+            db_location,
+            colnames.FechaCitaColName.value,
+            [self.idx, colnames.EspecialidadColName.value],
+            "NSP",
+            "nsp_p"
+        )
+        self.historic_p_g = get_historic_p(
+            db_location,
+            colnames.FechaCitaColName.value,
+            [self.idx],
+            "NSP",
+            "nsp_p_g"
+        )
         self.data = self.data.merge(self.historic_p_s,how="left")
         self.data = self.data.merge(self.historic_p_g,how="left")
         
-        self.data["age"] = (self.data["FechaCita"]-self.data["FechaNac"]).astype('timedelta64[D]')/365.25
-        self.data["month"] = self.data["FechaCita"].dt.month_name()
-        self.data["day"] = self.data["FechaCita"].dt.day_name()
-        self.data["hour"] = self.data["HoraCita"].dt.hour
+        self.data["age"] = (
+            self.data[colnames.FechaCitaColName.value] - 
+            self.data[colnames.FechaNacColName.value]).dt.days/365.25
+        self.data["month"] = self.data[colnames.FechaCitaColName.value].dt.month_name()
+        self.data["day"] = self.data[colnames.FechaCitaColName.value].dt.day_name()
+        self.data["hour"] = self.data[colnames.HoraCitaColName.value].dt.hour
 
-        self.data = self.data[self.data["EstadoCita"].isin(["Atendido","No Atendido"])]
-        self.data["NSP"] = np.where(self.data["EstadoCita"] == "No Atendido",1,0)
+        self.data = self.data[self.data[colnames.EstadoCitaColName.value].isin(
+            ["Atendido","No Atendido"]
+        )]
+        self.data["NSP"] = np.where(
+            self.data[colnames.EstadoCitaColName.value] == "No Atendido", 1, 0
+        )
 
         
         logger.info("current shape: {}".format(self.data.shape))
@@ -54,8 +89,14 @@ class Featurizer:
             self.data["delay"] = self.data["delay"].astype('category')
         logger.info("current shape: {}".format(self.data.shape))
 
-        self.data["age"] = pd.cut(self.data["age"],[0,0.5,5,12,18],right=False,labels=["lactante","infante_1","infante_2","adolescente"])
-        self.data_to_history = self.data[[idx,"Especialidad","FechaCita"]]
+        self.data["age"] = pd.cut(
+            self.data["age"],
+            [0,0.5,5,12,18],
+            right=False,
+            labels=["lactante","infante_1","infante_2","adolescente"]
+        )
+        self.data_to_history = self.data[
+            [idx, colnames.EspecialidadColName.value, colnames.FechaCitaColName.value]]
 
         ## Crear clasificacion TipoPrestacion medica/no medica a partir de los codigos FONASA
 
@@ -74,9 +115,15 @@ class Featurizer:
 
         self.data['TipoPrestacionC'] = 'OTRO'
 
-        self.data.loc[self.data['CodPrestacion'].isin(CodigosConsultaMedica),'TipoPrestacionC'] = 'ConsultaMedica'
-        self.data.loc[self.data['CodPrestacion'].isin(CodigosConsultaNoMedica),'TipoPrestacionC'] = 'ConsultaNoMedica'
-        self.data.loc[self.data['CodPrestacion'].isin(CodigosProcedimiento),'TipoPrestacionC'] = 'Procedimiento'
+        self.data.loc[self.data[
+            colnames.CodPrestacionColName.value
+        ].isin(CodigosConsultaMedica),'TipoPrestacionC'] = 'ConsultaMedica'
+        self.data.loc[self.data[
+            colnames.CodPrestacionColName.value
+        ].isin(CodigosConsultaNoMedica),'TipoPrestacionC'] = 'ConsultaNoMedica'
+        self.data.loc[self.data[
+            colnames.CodPrestacionColName.value
+        ].isin(CodigosProcedimiento),'TipoPrestacionC'] = 'Procedimiento'
         #DD.loc[np.logical_not(DD['CodPrestacion'].isin(CodigosConsultaMedica+CodigosConsultaNoMedica+CodigosProcedimiento)),'TipoPrestacionC'] = 'OTRO'
 
         ## Crear clasificacion Profesional Medico/No medico
@@ -99,11 +146,15 @@ class Featurizer:
         self.data['TipoProfesionalC'] = 'OTRO'
 
         # transformar las entradas de TipoProfesional unicode a string
-        self.data['TipoProfesional'].apply(lambda x: str(x))
+        self.data[colnames.TipoProfesionalColName.value].apply(lambda x: str(x))
 
         # decir si el tipo de profesional es medico o no medico, guardar en TipoProfesionalC
-        self.data.loc[self.data['TipoProfesional'].astype(str).isin(Profesional_medico),'TipoProfesionalC'] = 'Medico'
-        self.data.loc[self.data['TipoProfesional'].astype(str).isin(Profesional_noMedico),'TipoProfesionalC'] = 'NoMedico'
+        self.data.loc[self.data[
+            colnames.TipoProfesionalColName.value
+        ].astype(str).isin(Profesional_medico),'TipoProfesionalC'] = 'Medico'
+        self.data.loc[self.data[
+            colnames.TipoProfesionalColName.value
+        ].astype(str).isin(Profesional_noMedico),'TipoProfesionalC'] = 'NoMedico'
         #DD.loc[np.logical_not(DD['TipoProfesional'].isin(Profesional_medico)),'TipoProfesionalC'] = 'NoMedico'
 
         #print DD.loc[DD['TipoProfesionalC']=='Medico']['TipoProfesional'].value_counts()
@@ -111,9 +162,26 @@ class Featurizer:
         #
         #print DD.loc[DD['TipoProfesionalC']=='NoMedico']['TipoProfesional'].value_counts()
         if use_reserve:
-            self.data = self.data.drop(columns=[idx,"FechaCita","HoraCita","FechaNac","FechaReserva","EstadoCita",'TipoProfesional', 'CodPrestacion'], axis=1)
+            self.data = self.data.drop(columns=[
+                idx,
+                colnames.FechaCitaColName.value,
+                colnames.HoraCitaColName.value,
+                colnames.FechaNacColName.value,
+                "FechaReserva",
+                colnames.EstadoCitaColName.value,
+                colnames.TipoProfesionalColName.value,
+                colnames.CodPrestacionColName.value
+            ], axis=1)
         else:
-            self.data = self.data.drop(columns=[idx,"FechaCita","HoraCita","FechaNac","EstadoCita",'TipoProfesional', 'CodPrestacion'], axis=1)
+            self.data = self.data.drop(columns=[
+                idx,
+                colnames.FechaCitaColName.value,
+                colnames.HoraCitaColName.value,
+                colnames.FechaNacColName.value,
+                colnames.EstadoCitaColName.value,
+                colnames.TipoProfesionalColName.value,
+                colnames.CodPrestacionColName.value
+            ], axis=1)
         logger.info(self.data.columns)
         self.data = pd.get_dummies(self.data)
         logger.info("current shape: {}".format(self.data.shape))
@@ -171,7 +239,12 @@ class FeaturizerHrt:
     def __init__(self,interim_dataset_location):
         self.data = pd.read_csv(interim_dataset_location)
         logger.info("current shape: {}".format(self.data.shape))
-    def generate_basic_features(self,idx="RUT",db_location="data/processed/hrt_history.sqlite"):
+    def generate_basic_features(
+            self,
+            idx="RUT",
+            db_location="data/processed/hrt_history.sqlite",
+            label_column="FECHA_CONFIRMACION"
+        ):
         self.data["FECHA_CITA"] = pd.to_datetime(self.data["FECHA_CITA"])
         self.data.sort_values(by="FECHA_CITA",ascending=True,inplace=True)
         self.data["HORA_CITA"] = pd.to_datetime(self.data["HORA_CITA"])
@@ -189,7 +262,7 @@ class FeaturizerHrt:
         self.data["day"] = self.data["FECHA_CITA"].dt.day_name()
         self.data["hour"] = self.data["HORA_CITA"].dt.hour
 
-        self.data["NSP"] = np.where(self.data["FECHA_CONFIRMACION"].isna(),1,0)
+        self.data["NSP"] = np.where(self.data[label_column].isna(),1,0)
 
         
         logger.info("current shape: {}".format(self.data.shape))
@@ -203,7 +276,7 @@ class FeaturizerHrt:
         self.data["age"] = pd.cut(self.data["age"],[0,0.5,5,12,18,26,59,100],right=False,include_lowest=True,labels=["lactante","infante_1","infante_2","adolescente","joven","adulto","adulto mayor"])
         self.data_to_history = self.data[["RUT","ESPECIALIDAD","FECHA_CITA"]]
 
-        self.data = self.data.drop(columns=["RUT","FECHA_CITA","HORA_CITA","FECHANAC","FECHA_CONFIRMACION","FECHA_RESERVA"], axis=1)
+        self.data = self.data.drop(columns=["RUT","FECHA_CITA","HORA_CITA","FECHANAC","FECHA_RESERVA"] + [label_column], axis=1)
         logger.info(self.data.columns)
         self.data = pd.get_dummies(self.data)
         logger.info("current shape: {}".format(self.data.shape))

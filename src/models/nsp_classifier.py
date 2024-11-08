@@ -14,7 +14,7 @@ import json
 import logging
 import sklearn.tree
 
-from utils.settings import MODELS
+from src.utils.settings import MODELS
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -98,6 +98,7 @@ class NspModelDev:
                 return_train_score=True,
                 cv=3
             )
+            labels = labels.astype('float64')
             grid_search.fit(features,labels)
             self.gs_scores[model_name] = [grid_search.cv_results_,grid_search.best_params_,grid_search.best_score_]
             with open(report_location + 'grid_search_' + model_name + '.json', 'w', encoding='utf-8') as json_file:
@@ -113,6 +114,7 @@ class NspModelDev:
             estimator.set_params(**best_hp)
             features = self.train[:,:-1]
             labels = self.train[:,-1]
+            labels = labels.astype('float64')
             cv_scores = sklearn.model_selection.cross_validate(
                 estimator=estimator,
                 X=features,
@@ -142,6 +144,7 @@ class NspModelDev:
         else:
             features = self.train[:,:-1]
             label = self.train[:,-1]
+        label = label.astype('float64')
         for model in self.models:
             model_name = model[0].__class__.__name__
             estimator = model[0]
