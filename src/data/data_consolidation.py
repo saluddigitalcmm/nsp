@@ -7,6 +7,9 @@ import os
 import re
 
 import logging
+
+from src.schemas.col_names import HlcmDataColNames
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -30,16 +33,20 @@ class Consolidator:
             self.citas_excel_location = None
         logger.info( 'Los informes excel son {}'.format(self.newlist_Informe))
 
-    def consolidate(self,idx="PAID"):
+    def consolidate(self, idx="PAID", colnames=HlcmDataColNames):
         # El archivo Base.csv sera donde se guarde la base de datos completa. 
         # Si no esta en el directorio, se crea
         
-        
-        columns = [idx,u'FechaNac', u'Sexo', u'Comuna', u'Prevision',
-                  u'Especialidad', u'TipoAtencion', 'TipoProfesional', 'CodPrestacion',
-                  u'FechaCita', u'EstadoCita', u'HoraCita']
+        columns_read = [idx] + [e.value for e in colnames]
         if self.citas_excel_location != None:
-            self.citas_datos = pd.read_excel(self.citas_excel_location, parse_dates=['FechaNac','FechaCita','FechaReserva'])[columns[:-1] + ['FechaReserva']]
+            self.citas_datos = pd.read_excel(
+                self.citas_excel_location,
+                parse_dates=[
+                    colnames.FechaNacColName.value,
+                    colnames.FechaCitaColName.value,
+                    'FechaReserva'
+                ]
+            )[columns_read[:-1] + ['FechaReserva']]
             self.citas_datos[idx] = pd.to_numeric(self.citas_datos[idx],errors="coerce",downcast="integer")
             logger.info("citas_datos shape: {}".format(self.citas_datos.shape))
             self.citas_datos.dropna(inplace=True)
@@ -55,10 +62,19 @@ class Consolidator:
             df = pd.ExcelFile(archivo)
             # Leo la primera hoja del excel
             try:
-                DatosDF = df.parse(sheet_name=df.sheet_names[0],parse_dates=['FechaNac','FechaCita'])
+                DatosDF = df.parse(
+                    sheet_name=df.sheet_names[0],
+                    parse_dates=[colnames.FechaNacColName.value, colnames.FechaCitaColName.value]
+                )
                 # DatosDF[idx] = pd.to_numeric(DatosDF[idx],errors="coerce",downcast="integer")
             
-                DatosDF = DatosDF[columns]
+                DatosDF = DatosDF[columns_read]
+                DatosDF[colnames.FechaCitaColName.value] = pd.to_datetime(
+                    DatosDF[colnames.FechaCitaColName.value],
+                    errors='coerce'
+                )
+
+                DatosDF = DatosDF.dropna(subset=[colnames.FechaCitaColName.value])
                 self.Datos = pd.concat([self.Datos,DatosDF])
                 logger.info("{} cargado".format(archivo))
             except KeyError as e:
@@ -69,7 +85,15 @@ class Consolidator:
         self.Datos.dropna(inplace=True)
         logger.info("Datos shape: {}".format(self.Datos.shape))
         if self.use_citas_datos:
-            self.Datos = self.Datos.merge(self.citas_datos[['FechaNac','FechaCita','CodPrestacion','FechaReserva']],how="left")
+            self.Datos = self.Datos.merge(
+                self.citas_datos[[
+                    colnames.FechaNacColName.value,
+                     colnames.FechaCitaColName.value,
+                     colnames.CodPrestacionColName.value,
+                     'FechaReserva'
+                ]],
+                how="left"
+            )
         logger.info("Datos shape: {}".format(self.Datos.shape))
         logger.info(self.Datos.columns)
 
