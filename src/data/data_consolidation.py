@@ -44,9 +44,9 @@ class Consolidator:
                 parse_dates=[
                     colnames.FechaNacColName.value,
                     colnames.FechaCitaColName.value,
-                    'FechaReserva'
+                    colnames.FechaReservaColName.value
                 ]
-            )[columns_read[:-1] + ['FechaReserva']]
+            )[columns_read[:-1] + [colnames.FechaReservaColName.value]]
             self.citas_datos[idx] = pd.to_numeric(self.citas_datos[idx],errors="coerce",downcast="integer")
             logger.info("citas_datos shape: {}".format(self.citas_datos.shape))
             self.citas_datos.dropna(inplace=True)
@@ -90,7 +90,7 @@ class Consolidator:
                     colnames.FechaNacColName.value,
                      colnames.FechaCitaColName.value,
                      colnames.CodPrestacionColName.value,
-                     'FechaReserva'
+                     colnames.FechaReservaColName.value
                 ]],
                 how="left"
             )
