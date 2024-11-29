@@ -12,6 +12,7 @@ class HlcmDataColNames(Enum):
     FechaCitaColName = 'FechaCita'
     EstadoCitaColName = 'EstadoCita'
     HoraCitaColName = 'HoraCita'
+    FechaReservaColName = 'FECHA RESERVA'
     
 class HlcmNewDataColNames(Enum):
     
@@ -26,3 +27,4 @@ class HlcmNewDataColNames(Enum):
     FechaCitaColName = 'FechaCita'
     EstadoCitaColName = 'EstadoCita'
     HoraCitaColName = 'HoraCita'
+    FechaReservaColName = 'FechadeAgendamiento'

@@ -37,13 +37,16 @@ class Featurizer:
             self.data[colnames.HoraCitaColName.value]
             )
         self.data[colnames.FechaNacColName.value] = pd.to_datetime(
-            self.data[colnames.FechaNacColName.value]
+            self.data[colnames.FechaNacColName.value],
+            format='mixed'
         )
         if use_reserve:
-            self.data["FechaReserva"] = pd.to_datetime(self.data["FechaReserva"])
+            self.data[colnames.FechaReservaColName.value] = pd.to_datetime(
+                self.data[colnames.FechaReservaColName.value]
+            )
             self.data["delay"] = (
                 self.data[colnames.FechaCitaColName.value] - 
-                self.data["FechaReserva"]
+                self.data[colnames.FechaReservaColName.value]
             ).astype('timedelta64[W]')
         
         self.historic_p_s = get_historic_p(
@@ -101,17 +104,40 @@ class Featurizer:
         ## Crear clasificacion TipoPrestacion medica/no medica a partir de los codigos FONASA
 
         # Lista de codigos de consultas medicas
-        CodigosConsultaMedica = ['101111','101112','101113','903001']
+        CodigosConsultaMedica = [
+            '101111', '101112', '101113', '903001', '101300', '101301',
+            '101302', '101303', '101304', '101306', '101309', '101310',
+            '101311', '101316', '101317', '101322', '101324', '101325',
+            '101327', '101332', '101201', '101204', '101205', '101208',
+            '101210', '101211', '101213', '901005', '108001', '108201',
+            '108208', '108210', '108211', '108213', '108301', '108302',
+            '108304', '108306', '108309', '108310', '108311', '108316',
+            '108317', '108322', '108324', '108325', '108327', '108332',
+            '108400', '101004'
+        ]
 
         # Lista de codigos de consultas no medicas
-        CodigosConsultaNoMedica = ['903002','903303','102001','102005','102006','102007',
-                                '1101004','1101011','1101041','1101043','1101045','1201009',
-                                '1301008','1301009']
+        CodigosConsultaNoMedica = [
+            '903002', '903303', '102001', '102005', '102006', '102007',
+            '1101004', '1101011', '1101041', '1101043', '1101045', '1201009',
+            '1301008', '1301009', '102001', '102005', '102008',
+            '102010', '104002', '104004', '109001', '601105', '601106',
+            '608102', '608201', '903002', '903003', '908101', '908102',
+            '1012817', '1308301', '1308302', '1308303', '1308305',
+            '2032021', '2701101', '2701102', '2701103', '2701104',
+            '2701106', '2701107', '7024705', 'AA04B1', 'AA09A4', 'CONAS'
+        ]
 
         # Lista de codigos de procedimientos
-        CodigosProcedimiento = ['305048','901005','1101009','1101010','1701003',
-                                '1701006','1701045','1707002','1901030','2701013',
-                                '2701015','2702001','AA09A3','AA09A4','Estudio']
+        CodigosProcedimiento = [
+            '305048', '901005', '1101009', '1101010', '1701003', '1701006',
+            '1701045', '1707002', '1901030', '2701013', '2701015', '2702001',
+            'AA09A3', 'Estudio', '106002', '305041', '307005', '307012',
+            '307024', '401002', '401151', '1101004', '1101006', '1201009',
+            '1701003', '1701006', '1701045', '1701056', '1701058', '1701059',
+            '1707003', '1707036', '1901025', '1901026', '1901030', '2702018',
+            '2702104', 'AA09F5'
+        ]
 
         self.data['TipoPrestacionC'] = 'OTRO'
 
@@ -129,16 +155,20 @@ class Featurizer:
         ## Crear clasificacion Profesional Medico/No medico
 
         # lista de tipos de profesionales medicos
-        Profesional_medico = ['Médico','Médico Cirujano','Odontólogo/Dentista',
-                            'Cirujano(a) Dentista','Ginecólogo(a)','Psiquiatra']
+        Profesional_medico = [
+            'Médico','Médico Cirujano','Odontólogo/Dentista',
+            'Cirujano(a) Dentista','Ginecólogo(a)','Psiquiatra'
+        ]
 
         #map(unicode,Profesional_medico)
 
         # lista de tipos de profesionales no medicos
-        Profesional_noMedico = ['Enfermera (o)','Psicólogo (a)',#'No Mencionada',
-                                'Kinesiólogo (a)','Fonoaudiólogo (a)','Tecnólogo Médico',
-                                'Nutricionista','Terapeuta Ocupacional','Asistente Social',
-                                'Técnico Paramédico']
+        Profesional_noMedico = [
+            'Enfermera (o)','Psicólogo (a)', 'No Mencionada',
+            'Kinesiólogo (a)','Fonoaudiólogo (a)','Tecnólogo Médico',
+            'Nutricionista','Terapeuta Ocupacional','Asistente Social',
+            'Técnico Paramédico'
+        ]
 
         #map(unicode,Profesional_medico)
 
@@ -167,7 +197,7 @@ class Featurizer:
                 colnames.FechaCitaColName.value,
                 colnames.HoraCitaColName.value,
                 colnames.FechaNacColName.value,
-                "FechaReserva",
+                colnames.FechaReservaColName.value,
                 colnames.EstadoCitaColName.value,
                 colnames.TipoProfesionalColName.value,
                 colnames.CodPrestacionColName.value
